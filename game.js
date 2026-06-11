@@ -857,6 +857,18 @@ function updateEnemy(e,dt){
   const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy)||1;
   e.face=dx<0?-1:1;
   const S=e.st;
+  // ===== boss PHASE 2: rage at 50% HP — bigger, redder, faster, extra attacks =====
+  if(e.boss&&!S.rage&&e.hp<e.maxhp*.5){S.rage=true;e.rage=1;
+    e.scale*=1.16;e.sp*=1.28;e.dmg=Math.round(e.dmg*1.25);
+    banner('💢 '+e.boss+' 분노!!','#ff3860',1.7);sWarn();sBig();
+    shake=Math.max(shake,10);flashR=.5;slowT=.35;
+    fxs.push({kind:'nova',x:e.x,y:e.y,r:18,max:200,t:0,col:'#ff3860'});
+    puff(e.x,e.y,10);
+    // emergency burst: ring of bullets + summon adds
+    for(let i=0;i<14;i++){const a=i/14*TAU;efire(e.x,e.y,Math.cos(a)*180,Math.sin(a)*180,'orb',8,4.5,e.dmg);}
+    for(let i=0;i<3;i++){const add=spawnEnemy(stage<=2?'mouse':'wasp',e.x+rnd(-50,50),e.y+rnd(-50,50));}}
+  if(e.rage){e.rageGlow=(e.rageGlow||0)+dt;
+    if(Math.random()<dt*4&&parts.length<460)parts.push({x:e.x+rnd(-e.r,e.r),y:e.y-e.r,vx:rnd(-.6,.6),vy:-rnd(.6,1.6),life:.6,col:'#ff5a5a',sz:rnd(4,7),puff:1});}
   switch(e.beh){
     case 'chase':e.x+=(dx/d*e.sp+Math.cos(e.wob)*12)*dt;e.y+=(dy/d*e.sp+Math.sin(e.wob)*12)*dt;break;
     case 'dart':{const sp=e.sp*(.5+.8*Math.abs(Math.sin(e.wob)));
@@ -1446,9 +1458,16 @@ function draw(){
     if(e.elite){ctx.globalAlpha=.5+.2*Math.sin(performance.now()/160);
       ctx.strokeStyle='#ffd23e';ctx.lineWidth=4;
       ctx.beginPath();ctx.arc(e.x,yy,e.r*sc+12,0,TAU);ctx.stroke();ctx.globalAlpha=1;}
+    if(e.rage){ctx.globalAlpha=.35+.18*Math.sin(performance.now()/100);
+      ctx.strokeStyle='#ff2b40';ctx.lineWidth=5;
+      ctx.beginPath();ctx.arc(e.x,yy,e.r*sc+10,0,TAU);ctx.stroke();ctx.globalAlpha=1;}
     ctx.save();ctx.translate(e.x,yy);ctx.rotate(rot);
     ctx.scale((e.face===-1?-1:1)*sx,sy);ctx.drawImage(sp.n,-sp.half,-sp.half);
     if(e.flash>.08){ctx.globalAlpha=e.flash*.9;ctx.drawImage(sp.w,-sp.half,-sp.half);ctx.globalAlpha=1;}
+    if(e.rage){ctx.globalAlpha=.3+.12*Math.sin(performance.now()/90);
+      ctx.globalCompositeOperation='source-atop';ctx.fillStyle='#ff2b40';
+      ctx.fillRect(-sp.half,-sp.half,sp.half*2,sp.half*2);
+      ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;}
     ctx.restore();
     if(e.beh==='boar'&&e.st.ph==='dizzy'){
       ctx.font='20px Jua,sans-serif';ctx.textAlign='center';
