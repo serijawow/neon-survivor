@@ -412,49 +412,49 @@ const SKILL_KEYS=Object.keys(SKILLS);
 const STAGES=[
   {n:'동네 풀밭',icon:'🌼',shape:{k:'rect',w:1600,h:1200},bg:0,boss:'boar',elite:'slime',mid:'weasel',bossAt:78,
    d:'포근한 풀밭. 낮잠 자기 딱 좋은데…',vil:'boar',vline:'꿀꿀! 여긴 이제 멧돼지님 구역이다!',cline:'낮잠 방해한 죄… 무겁다냥!',
-   waves:[{t:0,rate:.82,pool:[['mouse',5]]},{t:22,rate:.6,pool:[['mouse',5],['dande',3],['slime',1.2]]},
-     {t:46,rate:.44,pool:[['mouse',4],['dande',3],['slime',1.2],['frog',1]]},
-     {t:64,rate:.34,pool:[['mouse',4],['dande',3],['slime',1.2],['frog',1],['hedge',1]]}],
+   waves:[{t:0,rate:.82,pool:[['mouse',5]]},{t:24,rate:.6,pool:[['mouse',5],['dande',3]]},
+     {t:48,rate:.44,pool:[['mouse',5],['dande',3],['slime',1.5]]},
+     {t:68,rate:.34,pool:[['mouse',4],['dande',3],['slime',1.5],['frog',1.2]]}],
    surges:[34,60]},
   {n:'골목 주차장',icon:'🅿️',shape:{k:'rect',w:1900,h:1000},bg:1,boss:'topgun',elite:'pigeon',mid:'sparrow',bossAt:82,
    d:'비둘기파가 점령한 주차장.',vil:'topgun',vline:'구구! 여긴 비둘기파 구역이다!',cline:'주차위반이다냥. 견인해주마!',
-   waves:[{t:0,rate:.8,pool:[['mouse',4],['fly',3]]},{t:22,rate:.56,pool:[['fly',3],['pigeon',3],['mouse',2],['bee',2]]},
-     {t:46,rate:.42,pool:[['pigeon',3],['mosq',3],['fly',2],['bee',2]]},{t:66,rate:.32,pool:[['pigeon',3],['mosq',3],['bee',2],['fly',2]]}],
+   waves:[{t:0,rate:.8,pool:[['mouse',4],['fly',3]]},{t:24,rate:.56,pool:[['mouse',4],['fly',3],['bee',2]]},
+     {t:48,rate:.42,pool:[['fly',3],['pigeon',3],['bee',2]]},{t:68,rate:.32,pool:[['mouse',3],['fly',3],['pigeon',3],['bee',2]]}],
    surges:[36,64]},
   {n:'놀이터 모래밭',icon:'🏖️',shape:{k:'circ',R:780},bg:2,boss:'toad',elite:'pebble',mid:'mole',bossAt:84,
    d:'모래밭이 끈적끈적해졌다…!',vil:'toad',vline:'두껍아 두껍아~ 새 집 내놔라 개굴!',cline:'모래밭은 모두의 것이다냥!',
-   waves:[{t:0,rate:.78,pool:[['ant',5],['pebble',2]]},{t:24,rate:.54,pool:[['ant',4],['pebble',2],['acorn',3]]},
-     {t:48,rate:.4,pool:[['ant',4],['acorn',3],['mosq',2],['wasp',1.2]]},
-     {t:68,rate:.32,pool:[['ant',4],['acorn',3],['mosq',2],['pebble',2],['wasp',1.2]]}],
+   waves:[{t:0,rate:.78,pool:[['ant',5]]},{t:24,rate:.54,pool:[['ant',5],['acorn',3]]},
+     {t:48,rate:.4,pool:[['ant',4],['pebble',2],['acorn',3]]},
+     {t:68,rate:.32,pool:[['ant',4],['pebble',2],['acorn',3],['wasp',1.3]]}],
    surges:[38,66]},
   {n:'시장 골목',icon:'🧺',shape:{k:'rect',w:2200,h:760},bg:3,boss:'duo',elite:'wasp',mid:'firefly',bossAt:86,
    d:'좁고 긴 골목. 도망칠 곳이 없다!',vil:'flyB',vline:'위이잉~ 시장 보호비 내놔라!',cline:'양아치들은 퇴치한다냥!',
-   waves:[{t:0,rate:.76,pool:[['mouse',4],['fly',3]]},{t:24,rate:.54,pool:[['mouse',4],['mosq',3],['bee',2],['hedge',1.2]]},
-     {t:48,rate:.4,pool:[['mouse',3],['mosq',3],['bee',3],['hedge',1.2],['wasp',1.2]]},
-     {t:70,rate:.3,pool:[['mosq',3],['bee',3],['pigeon',2],['hedge',1.2],['wasp',1.2]]}],
+   waves:[{t:0,rate:.76,pool:[['mouse',4],['mosq',3]]},{t:24,rate:.54,pool:[['mouse',4],['mosq',3],['bee',2]]},
+     {t:48,rate:.4,pool:[['mouse',3],['mosq',3],['bee',2],['hedge',1.3]]},
+     {t:68,rate:.3,pool:[['mouse',3],['mosq',3],['bee',2],['hedge',1.3]]}],
    surges:[40,68]},
   {n:'아파트 옥상',icon:'🌆',shape:{k:'rect',w:1200,h:1200},bg:4,boss:'racc',elite:'dande',mid:'waspU',bossAt:88,
    d:'노을 지는 옥상. 쓰레기 냄새가 난다.',vil:'racc',vline:'크큭, 내 보물(쓰레기)들을 노리러 왔나?',cline:'분리수거 해주마냥!',
-   waves:[{t:0,rate:.78,pool:[['pigeon',3],['fly',3]]},{t:24,rate:.54,pool:[['pigeon',3],['dande',2],['wasp',2]]},
-     {t:50,rate:.4,pool:[['pigeon',3],['wasp',3],['dande',2],['hedge',2]]},{t:72,rate:.3,pool:[['wasp',3],['hedge',3],['dande',2],['mosq',2]]}],
+   waves:[{t:0,rate:.76,pool:[['fly',3],['pigeon',3]]},{t:24,rate:.52,pool:[['fly',3],['pigeon',3],['dande',2]]},
+     {t:48,rate:.38,pool:[['pigeon',3],['dande',3],['wasp',1.3]]},{t:68,rate:.3,pool:[['fly',2],['pigeon',3],['dande',3],['wasp',1.3]]}],
    surges:[42,70]},
   {n:'하수도',icon:'🕳️',shape:{k:'ring',R:820,r:300},bg:5,boss:'frogq',elite:'mouse',mid:'bigslime',bossAt:90,
    d:'빙글 도는 둥근 하수도. 미끌미끌!',vil:'frogq',vline:'개굴~ 이 하수도는 슬라임 여왕 거다!',cline:'으, 미끌거린다냥! 빨리 끝내자!',
-   waves:[{t:0,rate:.74,pool:[['mouse',4],['fly',3]]},{t:24,rate:.5,pool:[['mouse',3],['mosq',3],['bee',2],['slime',1.2]]},
-     {t:50,rate:.38,pool:[['mouse',3],['mosq',3],['bee',3],['slime',1.2],['snake',1]]},
-     {t:74,rate:.3,pool:[['mosq',3],['bee',3],['slime',1.2],['snake',1],['wasp',1.2]]}],
+   waves:[{t:0,rate:.74,pool:[['mouse',4],['mosq',3]]},{t:24,rate:.5,pool:[['mouse',4],['mosq',3],['bee',2]]},
+     {t:48,rate:.38,pool:[['mouse',3],['mosq',3],['bee',2],['slime',1.5]]},
+     {t:68,rate:.3,pool:[['mouse',3],['mosq',3],['bee',2],['slime',1.5]]}],
    surges:[44,72]},
   {n:'뒷산 오솔길',icon:'🌲',shape:{k:'rect',w:2400,h:700},bg:6,boss:'dogB',elite:'hedge',mid:'badger',bossAt:92,
    d:'정상으로 가는 마지막 길목.',vil:'dogB',vline:'멍멍! 이 길은 못 지나간다!',cline:'산책 중이다냥. 비켜라!',
-   waves:[{t:0,rate:.72,pool:[['mouse',4],['acorn',2]]},{t:24,rate:.5,pool:[['mouse',3],['acorn',3],['hedge',1.2],['frog',1]]},
-     {t:52,rate:.38,pool:[['mouse',3],['acorn',3],['mosq',2],['hedge',1.2],['snake',1],['wasp',1.2]]},
-     {t:76,rate:.3,pool:[['mouse',3],['acorn',3],['mosq',2],['hedge',1.2],['snake',1],['wasp',1.2]]}],
+   waves:[{t:0,rate:.72,pool:[['mouse',4],['acorn',2]]},{t:24,rate:.5,pool:[['mouse',4],['acorn',3],['hedge',1.3]]},
+     {t:48,rate:.38,pool:[['mouse',3],['acorn',3],['hedge',1.3],['snake',1]]},
+     {t:68,rate:.3,pool:[['mouse',3],['acorn',3],['hedge',1.3],['snake',1]]}],
    surges:[46,74]},
   {n:'뒷산 정상',icon:'🌙',shape:{k:'circ',R:740},bg:7,boss:'mage',elite:'snake',mid:'golem',bossAt:98,
    d:'모든 악당의 우두머리가 기다린다…',vil:'mage',vline:'찍찍… 용케 왔군. 이 몸이 동네의 새 주인이다!',cline:'동네는 못 넘본다냥. 끝장이다냥!!',
-   waves:[{t:0,rate:.7,pool:[['mouse',3],['dande',2]]},{t:24,rate:.46,pool:[['mouse',3],['dande',3],['wasp',1.2],['hedge',1.2]]},
-     {t:52,rate:.36,pool:[['mouse',3],['dande',3],['mosq',2],['wasp',1.2],['hedge',1.2],['snake',1]]},
-     {t:78,rate:.28,pool:[['dande',3],['mosq',3],['wasp',1.2],['hedge',1.2],['snake',1],['frog',1]]}],
+   waves:[{t:0,rate:.7,pool:[['mouse',4],['dande',2]]},{t:24,rate:.46,pool:[['mouse',4],['dande',3],['wasp',1.3]]},
+     {t:48,rate:.36,pool:[['mouse',3],['dande',3],['wasp',1.3],['snake',1]]},
+     {t:68,rate:.3,pool:[['mouse',3],['dande',3],['wasp',1.3],['snake',1]]}],
    surges:[40,66,88],elite2:'wasp'},
 ];
 const MOB={
@@ -1973,11 +1973,17 @@ function draw(){
     ctx.fillStyle='#ff7a9a';ctx.beginPath();ctx.arc(f.x2,f.y2,14,0,TAU);ctx.fill();}
   // claw
   for(const f of fxs)if(f.kind==='claw'){
+    const a=Math.max(0,1-f.t/.22),R=(f.r||90)*1.05,grow=.4+Math.min(1,f.t/.1)*.6;
     ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.ang);
-    ctx.globalAlpha=Math.max(0,1-f.t/.22);
-    ctx.strokeStyle='#fff';ctx.lineWidth=5;
-    for(const off of[-.4,0,.4]){
-      ctx.beginPath();ctx.arc(0,off*30,72,-.5+off*.2,.5+off*.2);ctx.stroke();}
+    // 3 sharp tapered slash-marks fanning across the swing (pointed ends = claw scratch)
+    for(let k=-1;k<=1;k++){const c=k*.30,a0=-.5+c,a1=.5+c,rOut=R,rIn=R*.74;
+      ctx.beginPath();
+      for(let s=0;s<=10;s++){const t=s/10,ang=a0+(a1-a0)*t;ctx.lineTo(Math.cos(ang)*rOut*grow,Math.sin(ang)*rOut*grow);}
+      for(let s=10;s>=0;s--){const t=s/10,ang=a0+(a1-a0)*t,pinch=Math.sin(t*Math.PI);
+        const ri=rOut-(rOut-rIn)*pinch;ctx.lineTo(Math.cos(ang)*ri*grow,Math.sin(ang)*ri*grow);}
+      ctx.closePath();
+      ctx.fillStyle='rgba(255,255,255,'+(a*.9)+')';ctx.fill();
+      ctx.strokeStyle='rgba(255,120,160,'+(a*.85)+')';ctx.lineWidth=2;ctx.stroke();}
     ctx.restore();}
   // hit sparks — quick white/gold cross-flash
   for(const f of fxs)if(f.kind==='spark'){
@@ -2254,17 +2260,15 @@ function cardHTML(p){
   else{const D=PASS[p.key];
     icon=`<img src="${cvURL(ICONS[D.icon])}">`;
     name=D.name;cl=p.tier==='SS'?'초월 강화!':p.tier==='S'?'대폭 강화!':'강화';desc=D.d(p.tier);}
-  const tb=p.disp||p.tier;
-  return `<div class="tb t${p.tier}">${tb}</div>
+  // new-weapon cards carry no tier — only upgrades/passives do
+  const badge=p.kind==='new'?`<div class="tb tnew">NEW</div>`:`<div class="tb t${p.tier}">${p.disp||p.tier}</div>`;
+  return `${badge}
     <div class="ci">${icon}</div><div class="cn">${name}</div>
     <div class="cl">${cl}</div><div class="cd">${desc}</div>`;}
 function applyCard(p){
   if(p.kind==='evo'){const w=player.weapons[p.key];p.ev.fx(w);w.evo=p.ev.id;w.lvl+=4;
     banner(p.ev.n+' 진화!','#ff4f8a',1.6);}
-  else if(p.kind==='new'){newWeapon(p.key);
-    const w=player.weapons[p.key];
-    if(p.tier==='B')w.dmg+=.1;if(p.tier==='A')w.dmg+=.25;
-    if(p.tier==='S')w.dmg+=.4;if(p.tier==='SS'){w.dmg+=.4;w.n+=1;}}
+  else if(p.kind==='new'){newWeapon(p.key);}  // equipped at base — no tier bonus
   else if(p.kind==='var'){const w=player.weapons[p.key];p.v.fx(w);
     w.lvl=(w.lvl||0)+1;w.pow=(w.pow||0)+({C:1,B:1,A:2,S:3,SS:4}[p.tier]||1);}
   else if(p.kind==='def'){player.defN=player.defN||{};
@@ -2292,11 +2296,11 @@ function showLevelup(){
   if(!picks.length){state='playing';return;}
   picks.forEach((p,i)=>{
     const el=document.createElement('div');
-    el.className='card t'+p.tier;
+    el.className='card '+(p.kind==='new'?'tnew':'t'+p.tier);
     el.style.animationDelay=(i*.09)+'s';
     el.innerHTML=cardHTML(p);
     el.onclick=()=>{applyCard(p);hide('levelup');sPick();
-      if(p.tier==='S'||p.tier==='SS'){sChest();flashW=.7;}
+      if(p.kind!=='new'&&(p.tier==='S'||p.tier==='SS')){sChest();flashW=.7;}
       state='playing';ac();
       if(pendingLv>0)levelDelay=.3;};
     wrap.appendChild(el);});
@@ -2333,11 +2337,11 @@ function openChestNow(){
         el.innerHTML='🐾';
         el.onclick=()=>{if(chestChosen!==null)return;
           chestChosen=i;sPick();
-          el.className='card t'+p.tier;el.innerHTML=cardHTML(p);
+          el.className='card '+(p.kind==='new'?'tnew':'t'+p.tier);el.innerHTML=cardHTML(p);
           setTimeout(()=>{
             chestPicks.forEach((q,j)=>{if(j!==i){
               const o=row.children[j];
-              o.className='card dim t'+q.tier;o.innerHTML=cardHTML(q);}});
+              o.className='card dim '+(q.kind==='new'?'tnew':'t'+q.tier);o.innerHTML=cardHTML(q);}});
             $('chestClaim').classList.remove('hidden');},420);};
         row.appendChild(el);});
       row.classList.remove('hidden');},900);})();}
