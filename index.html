@@ -7,26 +7,40 @@
 <meta property="og:title" content="냥냥 서바이버 🐾">
 <meta property="og:description" content="낮잠을 방해한 동네 악당들을 혼내주는 고양이 액션! 8개 스테이지를 클리어하고 동네를 지켜라!">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🐾</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@700&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{width:100%;height:100%;overflow:hidden;background:#7fbe5e;
-    font-family:'Segoe UI','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-    touch-action:none;user-select:none;-webkit-user-select:none;color:#4a3b2a}
+  html,body{width:100%;height:100%;overflow:hidden;background:#8fcf67;
+    font-family:'Jua','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    touch-action:none;user-select:none;-webkit-user-select:none;color:#5b4632;letter-spacing:.2px}
   #c{display:block;width:100%;height:100%}
   .ov{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    text-align:center;z-index:10;padding:14px;background:rgba(46,66,38,.6);backdrop-filter:blur(6px);overflow-y:auto}
+    text-align:center;z-index:10;padding:14px;overflow-y:auto;
+    background:radial-gradient(ellipse at 50% 28%,rgba(60,90,45,.4),rgba(28,44,20,.74))}
   .hidden{display:none !important}
-  .panel{background:#fff8e8;border-radius:24px;padding:22px 18px;max-width:500px;width:100%;
-    box-shadow:0 10px 0 rgba(0,0,0,.18),0 16px 40px rgba(0,0,0,.3);border:4px solid #5a4632;position:relative}
-  h1{font-size:min(10.5vw,46px);font-weight:900;letter-spacing:-1px;line-height:1.12;color:#e8651f;
-    text-shadow:2.5px 3px 0 #5a4632,-1px -1px 0 #fff}
-  .sub{font-size:min(3.9vw,15px);color:#7a6a52;margin:10px 0 4px;line-height:1.65}
+  /* storybook paper panel: warm paper + ink double outline */
+  .panel{position:relative;max-width:500px;width:100%;padding:24px 20px;
+    background:radial-gradient(circle at 16% 10%,rgba(255,255,255,.7),transparent 32%),
+      radial-gradient(circle at 86% 92%,rgba(214,176,116,.2),transparent 38%),#fff6e4;
+    border:3.5px solid #5b4632;border-radius:30px 26px 32px 24px/26px 32px 24px 30px;
+    box-shadow:0 0 0 6px #fff6e4,0 0 0 9px #5b4632,0 13px 0 rgba(58,46,34,.22),0 22px 44px rgba(0,0,0,.42)}
+  .panel::after{content:'';position:absolute;inset:7px;border-radius:24px;pointer-events:none;
+    border:2.5px dashed rgba(91,70,50,.25)}
+  h1{font-family:'Jua',sans-serif;font-size:min(11vw,48px);line-height:1.1;color:#ff7a2f;font-weight:400;
+    text-shadow:3px 3px 0 #fff,5px 5px 0 #5b4632;-webkit-text-stroke:1.5px #5b4632;paint-order:stroke fill}
+  .sub{font-size:min(4.1vw,16px);color:#7a6448;margin:11px 0 4px;line-height:1.62}
   .sub b{color:#e8651f}
-  button{border:3px solid #5a4632;border-radius:50px;padding:13px 36px;font-size:min(5.2vw,20px);font-weight:900;
-    color:#fff;cursor:pointer;font-family:inherit;background:linear-gradient(180deg,#ffb02f,#ff8c2f);
-    box-shadow:0 5px 0 #5a4632;transition:transform .08s;margin:6px 4px;text-shadow:0 1.5px 0 rgba(0,0,0,.25)}
-  button:active{transform:translateY(4px);box-shadow:0 1px 0 #5a4632}
-  button.ghost{background:#efe6d2;color:#7a6a52;text-shadow:none;font-size:min(4vw,15px);padding:10px 24px}
+  button{border:3px solid #5b4632;border-radius:40px 36px 42px 38px/38px 42px 36px 40px;
+    padding:13px 38px;font-size:min(5.3vw,21px);font-weight:400;font-family:'Jua',sans-serif;
+    color:#fff;cursor:pointer;background:linear-gradient(180deg,#ffb840,#ff8c2f);
+    box-shadow:0 5px 0 #5b4632,0 8px 13px rgba(0,0,0,.22);transition:transform .08s,box-shadow .08s;
+    margin:6px 4px;text-shadow:0 2px 0 rgba(120,60,20,.45)}
+  button:active{transform:translateY(4px);box-shadow:0 1px 0 #5b4632}
+  button.ghost{background:linear-gradient(180deg,#f3ead6,#e7dcc4);color:#7a6a52;text-shadow:none;
+    font-size:min(4vw,15px);padding:10px 24px;box-shadow:0 4px 0 #b9ac92}
+  button.ghost:active{box-shadow:0 1px 0 #b9ac92}
   button.big{display:block;width:100%;margin:7px 0;padding:15px;font-size:min(5.6vw,21px)}
   button.blue{background:linear-gradient(180deg,#5fb6e8,#3f96d8)}
   button.green{background:linear-gradient(180deg,#7ec85e,#5aa843)}
@@ -35,18 +49,18 @@
   input{border:3px solid #5a4632;border-radius:14px;padding:12px;font-size:18px;font-weight:800;
     font-family:inherit;width:100%;text-align:center;background:#fff;color:#4a3b2a;outline:none}
   .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-  .nick{font-weight:900;font-size:15px;color:#5a4632}
-  .coins{font-weight:900;font-size:16px;color:#c9820a}
-  /* stage grid */
+  .nick{font-size:16px;color:#5a4632}
+  .coins{font-size:17px;color:#c9820a}
+  /* stage grid — little signposts */
   #stageGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:12px 0 4px}
-  .stg{background:#fff;border:3px solid #cdbfa4;border-radius:16px;padding:9px 4px 7px;cursor:pointer;
-    transition:transform .08s;position:relative}
-  .stg:active{transform:scale(.93)}
-  .stg.lock{filter:grayscale(.9);opacity:.55}
-  .stg.cur{border-color:#e8651f;box-shadow:0 0 0 3px #ffd9a8}
-  .stg .si{font-size:26px;line-height:1.1}
-  .stg .sn{font-size:10.5px;font-weight:900;margin-top:2px;color:#5a4632;line-height:1.2}
-  .stg .sc{font-size:10px;color:#5aa843;font-weight:900;min-height:13px}
+  .stg{background:linear-gradient(180deg,#fffdf4,#fdeecb);border:3px solid #5b4632;border-radius:14px 12px 15px 13px;
+    padding:9px 4px 7px;cursor:pointer;transition:transform .08s;position:relative;box-shadow:0 4px 0 #b9926a}
+  .stg:active{transform:translateY(3px);box-shadow:0 1px 0 #b9926a}
+  .stg.lock{filter:grayscale(.95);opacity:.5}
+  .stg.cur{border-color:#e8651f;box-shadow:0 4px 0 #e8651f,0 0 0 3px #ffd9a8}
+  .stg .si{font-size:27px;line-height:1.1}
+  .stg .sn{font-size:11px;margin-top:2px;color:#5a4632;line-height:1.2}
+  .stg .sc{font-size:10.5px;color:#5aa843;min-height:13px}
   /* shop */
   .uprow{display:flex;align-items:center;gap:10px;background:#fff;border:3px solid #e3d8c0;
     border-radius:16px;padding:9px 12px;margin:7px 0;text-align:left}
@@ -60,17 +74,18 @@
   .uprow button{margin:0;padding:9px 14px;font-size:13px;border-radius:14px;white-space:nowrap}
   /* cats */
   #catGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:10px 0}
-  .cat{background:#fff;border:3px solid #e3d8c0;border-radius:18px;padding:10px 6px;cursor:pointer;
-    transition:transform .08s;position:relative}
-  .cat:active{transform:scale(.95)}
-  .cat.sel{border-color:#5aa843;box-shadow:0 0 0 3px #c4e8ae}
-  .cat.locked{filter:grayscale(.8);opacity:.75}
-  .cat .cn2{font-size:14px;font-weight:900;color:#4a3b2a;margin-top:2px}
-  .cat .cp{font-size:11px;color:#9a8a6e;line-height:1.4;margin-top:2px;min-height:30px}
-  .cat .price{font-size:13px;font-weight:900;color:#c9820a;margin-top:3px}
+  .cat{background:linear-gradient(180deg,#fffdf4,#fdeecb);border:3px solid #5b4632;border-radius:18px 16px 19px 17px;
+    padding:10px 6px;cursor:pointer;transition:transform .08s;position:relative;box-shadow:0 4px 0 #b9926a}
+  .cat:active{transform:translateY(3px);box-shadow:0 1px 0 #b9926a}
+  .cat.sel{border-color:#5aa843;box-shadow:0 4px 0 #5aa843,0 0 0 3px #c4e8ae}
+  .cat.locked{filter:grayscale(.82);opacity:.72}
+  .cat .cn2{font-size:15px;color:#4a3b2a;margin-top:2px}
+  .cat .cp{font-size:11.5px;color:#9a8a6e;line-height:1.4;margin-top:2px;min-height:30px}
+  .cat .price{font-size:14px;color:#c9820a;margin-top:3px}
   /* level-up cards */
-  .lutitle{font-size:min(8vw,34px);font-weight:900;color:#fff;margin-bottom:14px;
-    text-shadow:0 3px 0 rgba(0,0,0,.35);animation:bump .45s cubic-bezier(.2,2.4,.4,1)}
+  .lutitle{font-family:'Jua',sans-serif;font-size:min(8.5vw,36px);color:#fff;margin-bottom:14px;
+    text-shadow:2px 2px 0 #5b4632,4px 4px 0 rgba(0,0,0,.3);-webkit-text-stroke:1px #5b4632;paint-order:stroke fill;
+    animation:bump .45s cubic-bezier(.2,2.4,.4,1)}
   @keyframes bump{0%{transform:scale(.2)}100%{transform:scale(1)}}
   #luCards,#chestRow{display:flex;gap:11px;width:100%;max-width:540px;justify-content:center;flex-wrap:wrap}
   .card{flex:1 1 0;min-width:126px;max-width:168px;background:#fff8e8;border:3.5px solid #cdbfa4;
