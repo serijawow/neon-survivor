@@ -15,25 +15,8 @@ function toon(size,fn){
   og.fillStyle='#fff';og.fillRect(0,0,S,S);
   const f=document.createElement('canvas');f.width=f.height=S;
   const fg=f.getContext('2d');
-  fg.shadowColor='rgba(40,40,20,.28)';fg.shadowBlur=5;fg.shadowOffsetY=3;
+  fg.shadowColor='rgba(40,40,20,.26)';fg.shadowBlur=4;fg.shadowOffsetY=2;
   fg.drawImage(t,0,0);
-  // ---- baked soft shading: top-left highlight + bottom-right ambient occlusion ----
-  // (masked to the sprite via source-atop; baked once, so zero runtime cost)
-  fg.shadowColor='transparent';fg.shadowBlur=0;fg.shadowOffsetY=0;
-  fg.globalCompositeOperation='source-atop';
-  const hl=fg.createRadialGradient(S*.36,S*.30,S*.04,S*.42,S*.40,S*.62);
-  hl.addColorStop(0,'rgba(255,255,255,.42)');hl.addColorStop(.45,'rgba(255,255,255,.12)');
-  hl.addColorStop(1,'rgba(255,255,255,0)');
-  fg.fillStyle=hl;fg.fillRect(0,0,S,S);
-  const sh=fg.createRadialGradient(S*.66,S*.74,S*.05,S*.5,S*.52,S*.72);
-  sh.addColorStop(0,'rgba(60,40,30,.28)');sh.addColorStop(.5,'rgba(60,40,30,.08)');
-  sh.addColorStop(1,'rgba(60,40,30,0)');
-  fg.fillStyle=sh;fg.fillRect(0,0,S,S);
-  // rim sheen along the top edge for a glossy, illustrated look
-  const rim=fg.createLinearGradient(0,0,0,S*.5);
-  rim.addColorStop(0,'rgba(255,255,255,.22)');rim.addColorStop(1,'rgba(255,255,255,0)');
-  fg.fillStyle=rim;fg.fillRect(0,0,S,S*.5);
-  fg.globalCompositeOperation='source-over';
   return {n:f,w:o,half:S/2};}
 function el(g,x,y,rx,ry,col,lw){g.beginPath();g.ellipse(x,y,rx,ry,0,0,TAU);
   if(col){g.fillStyle=col;g.fill();}
@@ -403,6 +386,23 @@ const ICONS={
       g.bezierCurveTo(-r*.5,-r*.1,-r*.5,-r*.7,0,-r*.12);g.closePath();g.fill();g.stroke();g.restore();}
     g.strokeStyle='#3a7a2a';g.lineWidth=r*.1;g.beginPath();g.moveTo(0,r*.1);g.lineTo(r*.18,r*.8);g.stroke();}),
 };
+function acornFn(g,r){const lw=r*.1;
+  el(g,0,r*.22,r*.64,r*.6,'#b5762f',lw); // nut
+  g.fillStyle='#7a4a22';g.beginPath();g.ellipse(0,-r*.22,r*.72,r*.42,0,Math.PI,0);g.closePath();g.fill();
+  g.strokeStyle=OUT;g.lineWidth=lw;g.stroke();
+  g.strokeStyle='#5a3416';g.lineWidth=lw*.5;
+  for(let i=-2;i<=2;i++){g.beginPath();g.moveTo(i*r*.22,-r*.5);g.lineTo(i*r*.22,-r*.06);g.stroke();}
+  g.lineWidth=lw*1.2;g.beginPath();g.moveTo(0,-r*.58);g.lineTo(0,-r*.84);g.stroke();
+  meanEye(g,-r*.24,r*.18,r*.13,-1);meanEye(g,r*.24,r*.18,r*.13,1);
+  fang(g,0,r*.46,r*.12);}
+function beeFn(g,r){const lw=r*.11;
+  wingPair(g,r,-r*.45);
+  el(g,0,r*.05,r*.6,r*.45,'#ffce3a',lw);
+  g.save();g.beginPath();g.ellipse(0,r*.05,r*.6,r*.45,0,0,TAU);g.clip();
+  g.fillStyle='#3a3026';g.fillRect(-r*.48,-r*.45,r*.2,r);g.fillRect(-r*.04,-r*.45,r*.2,r);g.fillRect(r*.38,-r*.45,r*.2,r);g.restore();
+  poly2(g,[[-r*.6,r*.05],[-r*.96,r*.05],[-r*.6,r*.2]],OUT,0); // stinger
+  meanEye(g,r*.18,-r*.12,r*.11,-1);meanEye(g,r*.4,-r*.12,r*.11,1);
+  blushy(g,r*.5,r*.12,r*.12);}
 // ================= midbosses =================
 function weaselFn(g,r){const lw=r*.1;
   // long sly body
@@ -525,6 +525,8 @@ function moleFn(g,r){const lw=r*.1;
 const STK={
   ant:toon(34,(g,r)=>antFn(g,r)),
   pebble:toon(36,(g,r)=>pebbleFn(g,r)),
+  acorn:toon(36,(g,r)=>acornFn(g,r)),
+  bee:toon(32,(g,r)=>beeFn(g,r)),
   mole:toon(80,(g,r)=>moleFn(g,r)),
   weasel:toon(80,(g,r)=>weaselFn(g,r)),
   sparrow:toon(50,(g,r)=>sparrowFn(g,r)),

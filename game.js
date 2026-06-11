@@ -384,8 +384,9 @@ const SKILL_KEYS=Object.keys(SKILLS);
 const STAGES=[
   {n:'동네 풀밭',icon:'🌼',shape:{k:'rect',w:1600,h:1200},bg:0,boss:'boar',elite:'slime',mid:'weasel',bossAt:78,
    d:'포근한 풀밭. 낮잠 자기 딱 좋은데…',vil:'boar',vline:'꿀꿀! 여긴 이제 멧돼지님 구역이다!',cline:'낮잠 방해한 죄… 무겁다냥!',
-   waves:[{t:0,rate:.85,pool:[['mouse',5]]},{t:22,rate:.62,pool:[['mouse',4],['slime',3]]},
-     {t:46,rate:.46,pool:[['mouse',3],['slime',3],['frog',2]]},{t:64,rate:.36,pool:[['slime',3],['frog',3],['hedge',2]]}],
+   waves:[{t:0,rate:.82,pool:[['mouse',5]]},{t:22,rate:.6,pool:[['mouse',5],['bee',2],['dande',2],['slime',1.2]]},
+     {t:46,rate:.44,pool:[['mouse',4],['bee',3],['dande',2],['slime',1.2],['frog',1]]},
+     {t:64,rate:.34,pool:[['mouse',4],['bee',3],['dande',2.5],['slime',1.2],['frog',1],['hedge',1]]}],
    surges:[34,60]},
   {n:'골목 주차장',icon:'🅿️',shape:{k:'rect',w:1900,h:1000},bg:1,boss:'topgun',elite:'pigeon',mid:'sparrow',bossAt:82,
    d:'비둘기파가 점령한 주차장.',vil:'topgun',vline:'구구! 여긴 비둘기파 구역이다!',cline:'주차위반이다냥. 견인해주마!',
@@ -394,13 +395,15 @@ const STAGES=[
    surges:[36,64]},
   {n:'놀이터 모래밭',icon:'🏖️',shape:{k:'circ',R:780},bg:2,boss:'toad',elite:'pebble',mid:'mole',bossAt:84,
    d:'모래밭이 끈적끈적해졌다…!',vil:'toad',vline:'두껍아 두껍아~ 새 집 내놔라 개굴!',cline:'모래밭은 모두의 것이다냥!',
-   waves:[{t:0,rate:.8,pool:[['ant',4],['pebble',2]]},{t:24,rate:.56,pool:[['ant',4],['pebble',3],['wasp',2]]},
-     {t:48,rate:.42,pool:[['ant',4],['pebble',3],['mosq',2]]},{t:68,rate:.33,pool:[['ant',4],['pebble',3],['wasp',2],['mosq',2]]}],
+   waves:[{t:0,rate:.78,pool:[['ant',5],['pebble',2]]},{t:24,rate:.54,pool:[['ant',4],['pebble',2],['bee',2],['acorn',2]]},
+     {t:48,rate:.4,pool:[['ant',4],['bee',3],['acorn',2],['mosq',2],['wasp',1.2]]},
+     {t:68,rate:.32,pool:[['ant',4],['bee',3],['acorn',2],['mosq',2],['pebble',2],['wasp',1.2]]}],
    surges:[38,66]},
   {n:'시장 골목',icon:'🧺',shape:{k:'rect',w:2200,h:760},bg:3,boss:'duo',elite:'wasp',mid:'firefly',bossAt:86,
    d:'좁고 긴 골목. 도망칠 곳이 없다!',vil:'flyB',vline:'위이잉~ 시장 보호비 내놔라!',cline:'양아치들은 퇴치한다냥!',
-   waves:[{t:0,rate:.78,pool:[['mouse',4],['fly',3]]},{t:24,rate:.55,pool:[['mouse',3],['hedge',2],['mosq',3]]},
-     {t:48,rate:.4,pool:[['hedge',3],['mosq',3],['wasp',2],['fly',2]]},{t:70,rate:.31,pool:[['hedge',3],['wasp',3],['pigeon',2],['mosq',2]]}],
+   waves:[{t:0,rate:.76,pool:[['mouse',4],['fly',3]]},{t:24,rate:.54,pool:[['mouse',4],['mosq',3],['bee',2],['hedge',1.2]]},
+     {t:48,rate:.4,pool:[['mouse',3],['mosq',3],['bee',3],['acorn',2],['hedge',1.2],['wasp',1.2]]},
+     {t:70,rate:.3,pool:[['mosq',3],['bee',3],['acorn',2],['pigeon',2],['hedge',1.2],['wasp',1.2]]}],
    surges:[40,68]},
   {n:'아파트 옥상',icon:'🌆',shape:{k:'rect',w:1200,h:1200},bg:4,boss:'racc',elite:'dande',mid:'waspU',bossAt:88,
    d:'노을 지는 옥상. 쓰레기 냄새가 난다.',vil:'racc',vline:'크큭, 내 보물(쓰레기)들을 노리러 왔나?',cline:'분리수거 해주마냥!',
@@ -409,18 +412,21 @@ const STAGES=[
    surges:[42,70]},
   {n:'하수도',icon:'🕳️',shape:{k:'ring',R:820,r:300},bg:5,boss:'frogq',elite:'mouse',mid:'bigslime',bossAt:90,
    d:'빙글 도는 둥근 하수도. 미끌미끌!',vil:'frogq',vline:'개굴~ 이 하수도는 슬라임 여왕 거다!',cline:'으, 미끌거린다냥! 빨리 끝내자!',
-   waves:[{t:0,rate:.76,pool:[['mouse',3],['fly',3],['slime',2]]},{t:24,rate:.52,pool:[['slime',3],['mosq',3],['snake',1]]},
-     {t:50,rate:.39,pool:[['slime',3],['snake',2],['wasp',2],['mosq',2]]},{t:74,rate:.29,pool:[['snake',2],['wasp',3],['hedge',2],['slime',2]]}],
+   waves:[{t:0,rate:.74,pool:[['mouse',4],['fly',3]]},{t:24,rate:.5,pool:[['mouse',3],['mosq',3],['bee',2],['slime',1.2]]},
+     {t:50,rate:.38,pool:[['mouse',3],['mosq',3],['bee',3],['acorn',2],['slime',1.2],['snake',1]]},
+     {t:74,rate:.3,pool:[['mosq',3],['bee',3],['acorn',2],['slime',1.2],['snake',1],['wasp',1.2]]}],
    surges:[44,72]},
   {n:'뒷산 오솔길',icon:'🌲',shape:{k:'rect',w:2400,h:700},bg:6,boss:'dogB',elite:'hedge',mid:'badger',bossAt:92,
    d:'정상으로 가는 마지막 길목.',vil:'dogB',vline:'멍멍! 이 길은 못 지나간다!',cline:'산책 중이다냥. 비켜라!',
-   waves:[{t:0,rate:.74,pool:[['hedge',3],['frog',2]]},{t:24,rate:.5,pool:[['hedge',3],['frog',3],['wasp',2]]},
-     {t:52,rate:.38,pool:[['hedge',3],['snake',2],['wasp',3],['frog',2]]},{t:76,rate:.28,pool:[['hedge',3],['snake',2],['wasp',3],['dande',2],['mosq',2]]}],
+   waves:[{t:0,rate:.72,pool:[['mouse',4],['bee',2]]},{t:24,rate:.5,pool:[['mouse',3],['bee',3],['dande',2],['hedge',1.2],['frog',1]]},
+     {t:52,rate:.38,pool:[['mouse',3],['bee',3],['acorn',2],['dande',2],['hedge',1.2],['snake',1],['wasp',1.2]]},
+     {t:76,rate:.3,pool:[['mouse',3],['bee',3],['acorn',2],['mosq',2],['hedge',1.2],['snake',1],['wasp',1.2]]}],
    surges:[46,74]},
   {n:'뒷산 정상',icon:'🌙',shape:{k:'circ',R:740},bg:7,boss:'mage',elite:'snake',mid:'golem',bossAt:98,
    d:'모든 악당의 우두머리가 기다린다…',vil:'mage',vline:'찍찍… 용케 왔군. 이 몸이 동네의 새 주인이다!',cline:'동네는 못 넘본다냥. 끝장이다냥!!',
-   waves:[{t:0,rate:.72,pool:[['mouse',3],['wasp',2],['hedge',2]]},{t:24,rate:.48,pool:[['wasp',3],['hedge',3],['snake',1.5]]},
-     {t:52,rate:.36,pool:[['hedge',3],['snake',2],['dande',2],['wasp',2],['mosq',2]]},{t:78,rate:.26,pool:[['hedge',3],['snake',2.5],['wasp',3],['dande',2],['mosq',2],['frog',2]]}],
+   waves:[{t:0,rate:.7,pool:[['mouse',3],['bee',2]]},{t:24,rate:.46,pool:[['mouse',3],['bee',3],['dande',2],['wasp',1.2],['hedge',1.2]]},
+     {t:52,rate:.36,pool:[['mouse',3],['bee',3],['acorn',2],['dande',2],['mosq',2],['wasp',1.2],['hedge',1.2],['snake',1]]},
+     {t:78,rate:.28,pool:[['bee',3],['acorn',2],['dande',2],['mosq',3],['wasp',1.2],['hedge',1.2],['snake',1],['frog',1]]}],
    surges:[40,66,88],elite2:'wasp'},
 ];
 const MOB={
@@ -437,6 +443,8 @@ const MOB={
   dande:{stk:'dande',r:17,hp:18,sp:0,xp:2,dmg:9,beh:'turret'},
   ant:{stk:'ant',r:13,hp:8,sp:104,xp:1,dmg:7,beh:'dart'},        // 놀이터 개미
   pebble:{stk:'pebble',r:16,hp:24,sp:46,xp:2,dmg:11,beh:'chase'},// 놀이터 돌멩이
+  acorn:{stk:'acorn',r:15,hp:16,sp:0,xp:2,dmg:8,beh:'turret'},   // 도토리포 (포탑형)
+  bee:{stk:'bee',r:12,hp:10,sp:92,xp:1,dmg:8,beh:'shooter'},     // 꿀벌 (이동 원거리형)
   boar:{stk:'boar',r:36,hp:340,sp:60,xp:10,dmg:16,beh:'boar',boss:'돌격대장 멧돼지'},
   topgun:{stk:'topgun',r:32,hp:430,sp:0,xp:10,dmg:14,beh:'topgun',boss:'탑건 비둘기'},
   frogq:{stk:'frogq',r:40,hp:520,sp:0,xp:12,dmg:16,beh:'frogq',boss:'슬라임퀸 개구리'},
@@ -564,7 +572,10 @@ function spawnEnemy(type,ax,ay){
   if(enemies.length>170)return null;
   const d=MOB[type];let x=ax,y=ay;
   if(x===undefined){const p=arenaSpot(300,600);x=p.x;y=p.y;}
-  const e={type,stk:d.stk,x,y,r:d.r,hp:d.hp*(d.boss?(1+(stage-1)*.16):mobHpMul()),
+  // bosses: much tankier so the fight lasts & you must survive the patterns.
+  // mid-bosses get a smaller bump than full bosses.
+  const bossHp=d.boss?(d.mid?(1.7+(stage-1)*.18):(2.3+(stage-1)*.26)):0;
+  const e={type,stk:d.stk,x,y,r:d.r,hp:d.hp*(d.boss?bossHp:mobHpMul()),
     maxhp:0,sp:d.sp*(d.boss?1:mobSpMul()),xp:d.xp,dmg:d.dmg,coin:d.coin||0,beh:d.beh,boss:d.boss||null,mid:d.mid||false,
     flash:0,bIT:0,wob:rnd(0,TAU),kx:0,ky:0,st:{},vx:0,vy:0,meals:0,scale:1,face:1,stun:0,elite:false,sq:0};
   if(masterMode){
@@ -631,13 +642,27 @@ function director(dt){
   if(spawnT<=0){const w=curWave();
     const ramp=gTime>150?.62:gTime>90?.78:1;
     spawnT=Math.max(.12,w.rate*ramp*(0.78+0.22*Math.sin(gTime)));
-    let tot=0;for(const[,wt]of w.pool)tot+=wt;
-    let r=Math.random()*tot,pick=w.pool[0][0];
-    for(const[k,wt]of w.pool){r-=wt;if(r<=0){pick=k;break;}}
+    const pick=pickMob(w.pool);
     spawnEnemy(pick);
     // double / triple-spawn pressure late in the stage
-    if(gTime>140&&Math.random()<.55)spawnEnemy(pick);
-    if(gTime>200&&Math.random()<.4)spawnEnemy(pick);}}
+    if(gTime>140&&Math.random()<.55)spawnEnemy(pickMob(w.pool));
+    if(gTime>200&&Math.random()<.4)spawnEnemy(pickMob(w.pool));}}
+// special-pattern mobs (split/rush/jump/fuse/eat) stay rare — only a handful on screen.
+// common approach/ranged mobs make up the bulk. Re-rolls to a common type if a special is capped.
+const SPECIAL_BEH={split:1,rush:1,hop:1,fuse:1,eat:1};
+function pickMob(pool){
+  let tot=0;for(const[,wt]of pool)tot+=wt;
+  for(let tries=0;tries<4;tries++){
+    let r=Math.random()*tot,pick=pool[0][0];
+    for(const[k,wt]of pool){r-=wt;if(r<=0){pick=k;break;}}
+    const beh=MOB[pick].beh;
+    if(!SPECIAL_BEH[beh])return pick;
+    // cap each special behavior to a small on-screen count
+    let cnt=0;for(const e of enemies)if(!e.boss&&MOB[e.type]&&MOB[e.type].beh===beh)cnt++;
+    if(cnt<3+(stage>4?1:0))return pick;}
+  // all specials capped → fall back to the most common (first non-special) pool entry
+  for(const[k]of pool)if(!SPECIAL_BEH[MOB[k].beh])return k;
+  return pool[0][0];}
 // ================= combat =================
 function damageEnemy(e,dmg,hx,hy){
   let mul=1;
@@ -735,8 +760,8 @@ function efire(x,y,vx,vy,spr,r,life,dmg,o){
 function addZone(x,y,r,warn,burn,dmg){
   if(zones.length>26)return;
   zones.push({x,y,r,warn,burn:burn||0,dmg:dmg||10,max:warn});}
-function addBeam(x,y,ang,len,wd,warn,dmg){ // red telegraph beam → damage line
-  fxs.push({kind:'beam',x,y,ang,len,wd,t:0,warn,dmg});}
+function addBeam(x,y,ang,len,wd,warn,dmg){ // red telegraph lane → damage line
+  fxs.push({kind:'beam',x,y,ang,len,wd,t:0,warn,warn0:warn,dmg});}
 function distSeg(px,py,x1,y1,x2,y2){
   const dx=x2-x1,dy=y2-y1,L2=dx*dx+dy*dy||1;
   let t=((px-x1)*dx+(py-y1)*dy)/L2;t=clamp(t,0,1);
@@ -970,8 +995,19 @@ function updateEnemy(e,dt){
     case 'dart':{const sp=e.sp*(.5+.8*Math.abs(Math.sin(e.wob)));
       e.x+=(dx/d*sp+Math.cos(e.wob*1.7)*28)*dt;e.y+=(dy/d*sp+Math.sin(e.wob*1.7)*28)*dt;break;}
     case 'turret':{S.t=(S.t||rnd(1,2))-dt;
-      if(S.t<=0&&d<600){S.t=2.5;sShot();
-        efire(e.x,e.y,dx/d*190,dy/d*190,'thorn',7,4,9);puff(e.x,e.y-10,2);}break;}
+      if(S.t<=0&&d<620){S.t=2.5;sShot();
+        // acorn fires a 3-way spread; dandelion a single seed
+        if(e.type==='acorn'){const ba=Math.atan2(dy,dx);
+          for(let i=-1;i<=1;i++)efire(e.x,e.y-8,Math.cos(ba+i*.25)*200,Math.sin(ba+i*.25)*200,'acornp',7,4.5,e.dmg);}
+        else efire(e.x,e.y,dx/d*190,dy/d*190,'thorn',7,4,9);
+        puff(e.x,e.y-10,2);}break;}
+    case 'shooter':{ // mobile ranged — hovers at mid range and pecks shots at you
+      const want=270,m=(d-want)/Math.abs(d-want||1);
+      e.x+=(dx/d*e.sp*m+Math.cos(e.wob*1.6)*26)*dt;
+      e.y+=(dy/d*e.sp*m+Math.sin(e.wob*1.6)*26)*dt;
+      S.t=(S.t===undefined?rnd(.8,1.6):S.t)-dt;
+      if(S.t<=0&&d<560){S.t=1.7;sShot();
+        efire(e.x,e.y,dx/d*250,dy/d*250,'sting',7,3.5,e.dmg);}break;}
     case 'rush':
       if(!S.ph)S.ph='walk';
       if(S.ph==='walk'){e.x+=dx/d*e.sp*dt;e.y+=dy/d*e.sp*dt;
@@ -1309,25 +1345,31 @@ function updateEnemy(e,dt){
       if(!S.st2)S.st2=4;S.st2-=dt;
       if(S.st2<=0){S.st2=6;addZone(e.x,e.y,150,.7,0,e.dmg);}
       break;
-    case 'toad':
-      if(!S.ph){S.ph='hop';S.t=.8;S.fog=3.5;}
-      S.fog-=dt;
-      if(S.fog<=0){S.fog=e.rage?3.5:5;sHiss();
-        for(let i=0;i<(e.rage?4:3);i++)addZone(player.x+rnd(-140,140),player.y+rnd(-140,140),92,.85,3.2,12);
-        floater(e.x,e.y-e.r-12,'독안개!','#7fae3e',true);}
-      if(S.ph==='hop'){S.t-=dt;
-        if(S.t<=0){S.hops=(S.hops||0)+1;
-          if(S.hops%3===0){S.ph='tongueW';S.t=.6;S.ta=Math.atan2(dy,dx);addBeam(e.x,e.y,S.ta,400,54,.6,0);sWarn();}
-          else{S.ph='air';S.t=.5;S.x0=e.x;S.y0=e.y;const jd=Math.min(d,200);
-            S.x1=e.x+dx/d*jd;S.y1=e.y+dy/d*jd;sJump();}}}
-      else if(S.ph==='air'){S.t-=dt;const pr=1-S.t/.5;
-        e.x=S.x0+(S.x1-S.x0)*pr;e.y=S.y0+(S.y1-S.y0)*pr;e.air=Math.sin(pr*Math.PI)*48;
-        if(S.t<=0){S.ph='hop';S.t=.8;e.air=0;sThud();
-          for(let i=0;i<2;i++)spawnEnemy('slimeS',e.x+rnd(-20,20),e.y+rnd(-20,20));}}
-      else{S.t-=dt;if(S.t<=0){const x2=e.x+Math.cos(S.ta)*400,y2=e.y+Math.sin(S.ta)*400;
-        fxs.push({kind:'tongue',x1:e.x,y1:e.y,x2,y2,t:0});
-        if(player.iT<=0&&distSeg(player.x,player.y,e.x,e.y,x2,y2)<36)hurtPlayer(e.dmg);
-        S.ph='hop';S.t=.7;}}
+    case 'toad': // 독무(제자리 산탄) / 독방울(공중→낙하 장판) / 점프(사라졌다 광역 착지)
+      if(!S.ph){S.ph='idle';S.t=1;S.cy=0;}
+      if(S.ph==='idle'){S.t-=dt;
+        e.x+=dx/d*e.sp*.5*dt;e.y+=dy/d*e.sp*.5*dt;  // slow shuffle
+        if(S.t<=0){S.cy++;const pick=S.cy%3;
+          if(pick===0){S.ph='mist';S.t=e.rage?1.5:1.1;S.mn=0;floater(e.x,e.y-e.r-12,'독무!','#7fae3e',true);}
+          else if(pick===1){S.ph='dropW';S.t=1;floater(e.x,e.y-e.r-12,'독방울!','#9acd3e',true);sShot();
+            const dn=e.rage?6:4;  // big droplets lobbed up → land as staggered poison pools
+            for(let i=0;i<dn;i++)addZone(player.x+rnd(-200,200),player.y+rnd(-200,200),82,.8+i*.16,1.6,14);}
+          else{S.ph='crouch';S.t=.65;sWarn();}}}
+      else if(S.ph==='mist'){S.t-=dt;S.mn-=dt;
+        if(S.mn<=0){S.mn=e.rage?.1:.14;sShot();const a=rnd(0,TAU);
+          for(let i=0;i<3;i++)efire(e.x,e.y-8,Math.cos(a+i*2.1)*155,Math.sin(a+i*2.1)*155,'venom',7,4.5,Math.round(e.dmg*.7));}
+        if(S.t<=0){S.ph='idle';S.t=e.rage?.5:.9;}}
+      else if(S.ph==='dropW'){S.t-=dt;if(S.t<=0){S.ph='idle';S.t=e.rage?.6:1;}}
+      else if(S.ph==='crouch'){S.t-=dt;e.sq=Math.min(.7,(e.sq||0)+dt*2);
+        if(S.t<=0){S.ph='gone';S.dur=e.rage?1.6:2;S.t=S.dur;e.invis=1;e.air=400;sJump();puff(e.x,e.y,10);
+          S.lx=player.x;S.ly=player.y;  // commit a WIDE landing telegraph at the player
+          addZone(S.lx,S.ly,235,S.dur,0,Math.round(e.dmg*1.4));}}
+      else if(S.ph==='gone'){S.t-=dt;e.invis=1;e.air=400;
+        if(S.t<=0){e.invis=0;e.air=0;e.x=S.lx;e.y=S.ly;
+          sThud();shake=Math.max(shake,12);flashR=.35;
+          fxs.push({kind:'nova',x:e.x,y:e.y,r:20,max:235,t:0,col:'#7fae3e'});
+          for(let i=0;i<2;i++)spawnEnemy('slimeS',e.x+rnd(-30,30),e.y+rnd(-30,30));
+          S.ph='idle';S.t=e.rage?.5:.9;}}
       break;
   }
   e.x+=e.kx*dt;e.y+=e.ky*dt;
@@ -1678,6 +1720,12 @@ function drawEb(b){ // hostile bullet: red halo + core
   else if(b.spr==='dirt'){ctx.fillStyle='#7a5a3a';
     ctx.beginPath();for(let i=0;i<6;i++){const a=i/6*TAU,rr=i%2?b.r*.6:b.r;ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);}ctx.closePath();ctx.fill();
     ctx.fillStyle='#9a7a52';ctx.beginPath();ctx.arc(-b.r*.25,-b.r*.25,b.r*.35,0,TAU);ctx.fill();}
+  else if(b.spr==='acornp'){ctx.fillStyle='#b5762f';
+    ctx.beginPath();ctx.ellipse(0,b.r*.2,b.r*.8,b.r,0,0,TAU);ctx.fill();
+    ctx.fillStyle='#7a4a22';ctx.beginPath();ctx.ellipse(0,-b.r*.5,b.r*.9,b.r*.5,0,0,TAU);ctx.fill();}
+  else if(b.spr==='sting'){ctx.fillStyle='#ffce3a';ctx.strokeStyle='#3a3026';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.ellipse(0,0,b.r*1.3,b.r*.55,0,0,TAU);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#3a3026';ctx.beginPath();ctx.moveTo(b.r*1.1,0);ctx.lineTo(b.r*1.9,0);ctx.lineTo(b.r*1.1,b.r*.4);ctx.fill();}
   else{ctx.fillStyle='#c0392b';ctx.beginPath();ctx.arc(0,0,b.r,0,TAU);ctx.fill();}
   ctx.restore();}
 function draw(){
@@ -1704,10 +1752,21 @@ function draw(){
   // beams — translucent red rect
   for(const f of fxs)if(f.kind==='beam'&&f.warn>0){
     ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.ang);
-    ctx.fillStyle=`rgba(255,50,50,${.28+.14*Math.sin(performance.now()/80)})`;
-    ctx.fillRect(0,-f.wd/2,f.len,f.wd);
-    ctx.fillStyle='rgba(255,255,255,.5)';
-    ctx.fillRect(0,-1.5,f.len,3);ctx.restore();}
+    const w=f.wd,L=f.len,pr=clamp(1-f.warn/(f.warn0||f.warn||1),0,1);
+    // soft danger lane — gradient across width = no hard rectangle edges
+    const gr=ctx.createLinearGradient(0,-w/2,0,w/2);
+    gr.addColorStop(0,'rgba(255,60,60,0)');gr.addColorStop(.5,'rgba(255,64,64,.5)');gr.addColorStop(1,'rgba(255,60,60,0)');
+    ctx.fillStyle=gr;ctx.fillRect(0,-w/2,L,w);
+    // flowing chevrons pointing the attack direction (intuitive)
+    ctx.globalAlpha=.85;ctx.strokeStyle='#fff';ctx.lineWidth=4;ctx.lineJoin='round';ctx.lineCap='round';
+    const off=(performance.now()/240)%1*64;
+    for(let d=off;d<L;d+=64){ctx.beginPath();
+      ctx.moveTo(d,-w*.26);ctx.lineTo(d+w*.26,0);ctx.lineTo(d,w*.26);ctx.stroke();}
+    // charge meter fills toward target as it's about to fire
+    ctx.globalAlpha=1;ctx.strokeStyle='#ffe066';ctx.lineWidth=4;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(L*pr,0);ctx.stroke();
+    ctx.fillStyle='#ffe066';ctx.beginPath();ctx.arc(L*pr,0,5,0,TAU);ctx.fill();
+    ctx.restore();ctx.globalAlpha=1;}
   // gems
   for(const g of gems){const t=g.v>=8?'#ffd75a':g.v>=3?'#ff8ad8':'#7ec8ff';
     const b=1+Math.sin(g.t*6)*.15,r=(g.v>=8?9:g.v>=3?7:5.5)*b;
