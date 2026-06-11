@@ -15,8 +15,25 @@ function toon(size,fn){
   og.fillStyle='#fff';og.fillRect(0,0,S,S);
   const f=document.createElement('canvas');f.width=f.height=S;
   const fg=f.getContext('2d');
-  fg.shadowColor='rgba(40,40,20,.25)';fg.shadowBlur=4;fg.shadowOffsetY=2;
+  fg.shadowColor='rgba(40,40,20,.28)';fg.shadowBlur=5;fg.shadowOffsetY=3;
   fg.drawImage(t,0,0);
+  // ---- baked soft shading: top-left highlight + bottom-right ambient occlusion ----
+  // (masked to the sprite via source-atop; baked once, so zero runtime cost)
+  fg.shadowColor='transparent';fg.shadowBlur=0;fg.shadowOffsetY=0;
+  fg.globalCompositeOperation='source-atop';
+  const hl=fg.createRadialGradient(S*.36,S*.30,S*.04,S*.42,S*.40,S*.62);
+  hl.addColorStop(0,'rgba(255,255,255,.42)');hl.addColorStop(.45,'rgba(255,255,255,.12)');
+  hl.addColorStop(1,'rgba(255,255,255,0)');
+  fg.fillStyle=hl;fg.fillRect(0,0,S,S);
+  const sh=fg.createRadialGradient(S*.66,S*.74,S*.05,S*.5,S*.52,S*.72);
+  sh.addColorStop(0,'rgba(60,40,30,.28)');sh.addColorStop(.5,'rgba(60,40,30,.08)');
+  sh.addColorStop(1,'rgba(60,40,30,0)');
+  fg.fillStyle=sh;fg.fillRect(0,0,S,S);
+  // rim sheen along the top edge for a glossy, illustrated look
+  const rim=fg.createLinearGradient(0,0,0,S*.5);
+  rim.addColorStop(0,'rgba(255,255,255,.22)');rim.addColorStop(1,'rgba(255,255,255,0)');
+  fg.fillStyle=rim;fg.fillRect(0,0,S,S*.5);
+  fg.globalCompositeOperation='source-over';
   return {n:f,w:o,half:S/2};}
 function el(g,x,y,rx,ry,col,lw){g.beginPath();g.ellipse(x,y,rx,ry,0,0,TAU);
   if(col){g.fillStyle=col;g.fill();}

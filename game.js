@@ -2,12 +2,16 @@
 // ================= canvas =================
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,zoom=1;
-function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;
+const IS_TOUCH0=matchMedia('(pointer:coarse)').matches;
+function resize(){DPR=Math.min(devicePixelRatio||1,IS_TOUCH0?1.5:2);W=innerWidth;H=innerHeight;
   cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
   // zoom out on small screens so the player sees more of the world around them
   zoom=Math.max(.58,Math.min(1,Math.min(W,H)/600));}
 addEventListener('resize',resize);resize();
 const $=id=>document.getElementById(id);
+const _urlCache=new WeakMap();
+function cvURL(c){let u=_urlCache.get(c);if(!u){u=c.toDataURL();_urlCache.set(c,u);}return u;}
+const PCAP=IS_TOUCH0?300:480;  // cap particles lower on phones
 const rnd=(a,b)=>a+Math.random()*(b-a);
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const dist2=(ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by;return dx*dx+dy*dy};
@@ -49,12 +53,12 @@ function ac(){if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();
   comp.connect(master);
   musicG=AC.createGain();musicG.gain.value=.42;musicG.connect(comp);
   sfxG=AC.createGain();sfxG.gain.value=1;sfxG.connect(comp);
-  // reverb send (algorithmic impulse)
-  const len=AC.sampleRate*1.6,ir=AC.createBuffer(2,len,AC.sampleRate);
-  for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);
-    for(let i=0;i<len;i++){const t=i/len;d[i]=(Math.random()*2-1)*Math.pow(1-t,2.6);}}
-  const conv=AC.createConvolver();conv.buffer=ir;
-  revG=AC.createGain();revG.gain.value=.5;revG.connect(conv);conv.connect(comp);
+  // reverb send — cheap feedback delay (was a 1.6s stereo Convolver: heavy on mobile)
+  const dly=AC.createDelay(.6);dly.delayTime.value=.15;
+  const fb=AC.createGain();fb.gain.value=.34;
+  const damp=AC.createBiquadFilter();damp.type='lowpass';damp.frequency.value=2400;
+  dly.connect(damp);damp.connect(fb);fb.connect(dly);
+  revG=AC.createGain();revG.gain.value=.4;revG.connect(dly);dly.connect(comp);
   ac.nb=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);
   const nd=ac.nb.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;}
   if(AC.state==='suspended')AC.resume();return AC;}
@@ -482,10 +486,11 @@ function recompute(){
   player.dmgMul=player.dmgBase*(1+player.pass.dmg);
   player.cdMul=player.cdAcc;}
 // ================= helpers =================
-function burst(x,y,cols,n,sp){if(parts.length>480)return;
+function burst(x,y,cols,n,sp){if(parts.length>PCAP)return;
+  if(IS_TOUCH0)n=Math.ceil(n*.7);
   for(let i=0;i<n;i++){const a=rnd(0,TAU),v=rnd(1,sp||7);
     parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:rnd(.5,1),col:cols[(Math.random()*cols.length)|0],sz:rnd(3,6)});}}
-function puff(x,y,n){if(parts.length>480)return;
+function puff(x,y,n){if(parts.length>PCAP)return;
   for(let i=0;i<n;i++){const a=rnd(0,TAU),v=rnd(.5,3);
     parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-.5,life:rnd(.4,.9),col:'#ffffff',sz:rnd(5,10),puff:1});}}
 function floater(x,y,txt,col,big){if(floaters.length<70)floaters.push({x,y,txt,col,t:1,big});}
@@ -1490,6 +1495,21 @@ function yarnBoom(b){
   for(const e of enemies.slice())if(dist2(b.x,b.y,e.x,e.y)<R*R)damageEnemy(e,b.dmg,b.x,b.y);
   if(b.turret&&turrets.length<4)turrets.push({x:b.x,y:b.y,t:3,cd:.2});}
 // ================= draw =================
+// ---- cached scene gradients (sky depth + vignette lighting) ----
+function shade(hex,amt){const n=parseInt(hex.slice(1),16);
+  let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+  r=clamp(r+amt,0,255);g=clamp(g+amt,0,255);b=clamp(b+amt,0,255);
+  return 'rgb('+r+','+g+','+b+')';}
+let _skyG=null,_skyKey='',_vigG=null,_vigKey='';
+function skyGrad(){const k=ST.bg+'_'+W+'_'+H;if(k!==_skyKey){_skyKey=k;
+  const c=SKYS[ST.bg];_skyG=ctx.createLinearGradient(0,0,0,H);
+  _skyG.addColorStop(0,shade(c,30));_skyG.addColorStop(.5,c);_skyG.addColorStop(1,shade(c,-26));}
+  return _skyG;}
+function vignetteGrad(){const k=W+'_'+H;if(k!==_vigKey){_vigKey=k;
+  _vigG=ctx.createRadialGradient(W*.5,H*.44,Math.min(W,H)*.28,W*.5,H*.52,Math.max(W,H)*.7);
+  _vigG.addColorStop(0,'rgba(0,0,0,0)');_vigG.addColorStop(.7,'rgba(15,12,28,.12)');
+  _vigG.addColorStop(1,'rgba(15,12,28,.42)');}
+  return _vigG;}
 function drawArena(){
   // assumes world transform (cam + zoom) is already applied
   const s=ST.shape;
@@ -1621,8 +1641,8 @@ function drawEb(b){ // hostile bullet: red halo + core
   else{ctx.fillStyle='#c0392b';ctx.beginPath();ctx.arc(0,0,b.r,0,TAU);ctx.fill();}
   ctx.restore();}
 function draw(){
-  // sky (screen space, covers shake margin)
-  ctx.fillStyle=SKYS[ST.bg];ctx.fillRect(0,0,W,H);
+  // sky gradient (screen space — depth from light top to darker ground)
+  ctx.fillStyle=skyGrad();ctx.fillRect(0,0,W,H);
   ctx.save();
   if(shake>.4)ctx.translate(rnd(-shake,shake),rnd(-shake,shake));
   // world transform: center on camera, zoomed out on small screens
@@ -1845,6 +1865,8 @@ function draw(){
     ctx.fillStyle=f.col;ctx.fillText(f.txt,f.x,f.y);}
   ctx.globalAlpha=1;
   ctx.restore();
+  // vignette — depth/atmosphere (desktop only; skip on phones to save fill-rate)
+  if(!IS_TOUCH0){ctx.fillStyle=vignetteGrad();ctx.fillRect(0,0,W,H);}
   if(flashR>.02){ctx.fillStyle=`rgba(255,40,60,${flashR*.3})`;ctx.fillRect(0,0,W,H);}
   if(flashW>.02){ctx.fillStyle=`rgba(255,255,210,${flashW*.3})`;ctx.fillRect(0,0,W,H);}
   if(player.hp<=player.maxhp*.25&&player.hp>0&&state==='playing'){
@@ -2032,19 +2054,19 @@ function genCard(){
 function cardHTML(p){
   let icon,name,cl,desc;
   if(p.kind==='evo'){const D=WDEF[p.key];
-    icon=`<img src="${ICONS[D.icon].toDataURL()}">`;
+    icon=`<img src="${cvURL(ICONS[D.icon])}">`;
     name=p.ev.n;cl='✦ 최종 진화 ✦';desc=p.ev.d;}
   else if(p.kind==='new'){const D=WDEF[p.key];
-    icon=`<img src="${ICONS[D.icon].toDataURL()}">`;
+    icon=`<img src="${cvURL(ICONS[D.icon])}">`;
     name=D.name;cl='✨ 새 무기!';desc='새로운 무기를 장착한다!';}
   else if(p.kind==='var'){const D=WDEF[p.key];
-    icon=`<img src="${ICONS[D.icon].toDataURL()}">`;
+    icon=`<img src="${cvURL(ICONS[D.icon])}">`;
     name=p.v.n;cl=D.name;desc=p.v.d;}
   else if(p.kind==='def'){const D=DEFS[p.key];
-    icon=`<img src="${ICONS[D.icon].toDataURL()}">`;
+    icon=`<img src="${cvURL(ICONS[D.icon])}">`;
     name=D.name;cl='🛡 방어';desc=D.d(player);}
   else{const D=PASS[p.key];
-    icon=`<img src="${ICONS[D.icon].toDataURL()}">`;
+    icon=`<img src="${cvURL(ICONS[D.icon])}">`;
     name=D.name;cl=p.tier==='SS'?'초월 강화!':p.tier==='S'?'대폭 강화!':'강화';desc=D.d(p.tier);}
   const tb=p.disp||p.tier;
   return `<div class="tb t${p.tier}">${tb}</div>
@@ -2202,7 +2224,7 @@ function refreshMenu(){
   // home cat preview
   const hc=$('homeCat');hc.innerHTML='';
   const img=document.createElement('img');
-  img.src=STK[curCat().stk].n.toDataURL();img.width=84;img.height=84;
+  img.src=cvURL(STK[curCat().stk].n);img.width=84;img.height=84;
   hc.appendChild(img);
   $('btnPlay').disabled=!SV.owned.length;
   $('btnPlay').textContent=SV.owned.length?'▶ 모험 떠나기':'먼저 고양이를 영입하자!';
@@ -2252,7 +2274,7 @@ function refreshMenu(){
     const has=SV.owned.includes(c.key);
     const el=document.createElement('div');
     el.className='cat'+(SV.cat===c.key&&has?' sel':'')+(has?'':' locked');
-    el.innerHTML=`<img src="${STK[c.stk].n.toDataURL()}" width="64" height="64">
+    el.innerHTML=`<img src="${cvURL(STK[c.stk].n)}" width="64" height="64">
       <div class="cn2">${c.name}</div><div class="cp">${c.perk}</div>
       <div class="price">${has?(SV.cat===c.key?'✔ 출전 중':'선택'):(c.price?'🪙'+c.price:'무료 영입!')}</div>`;
     el.onclick=()=>{ac();
