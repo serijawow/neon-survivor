@@ -363,6 +363,14 @@ const ICONS={
     poly2(g,[[r*.36,0],[r*.9,-r*.4],[r*.9,r*.4]],'#7ec8ff',r*.12);
     dotEye(g,-r*.36,-r*.08,r*.1);}),
   bolt:iconCanvas((g,r)=>{poly2(g,[[r*.1,-r*.9],[-r*.5,r*.15],[-r*.08,r*.15],[-r*.25,r*.9],[r*.5,-r*.18],[r*.05,-r*.18]],'#ffd23e',r*.12);}),
+  claw:iconCanvas((g,r)=>{g.strokeStyle='#ff5a6a';g.lineWidth=r*.16;g.lineCap='round';
+    for(const o of[-.34,0,.34]){g.beginPath();g.arc(-r*.2,o*r,r*.85,-.55,.55);g.stroke();}}),
+  rose:iconCanvas((g,r)=>{el(g,0,-r*.1,r*.5,r*.5,'#e8443c',r*.12);
+    g.strokeStyle='#a82c28';g.lineWidth=r*.1;g.beginPath();g.arc(0,-r*.1,r*.26,0,4.5);g.stroke();
+    g.strokeStyle='#4f9b3f';g.lineWidth=r*.13;g.beginPath();g.moveTo(0,r*.32);g.lineTo(0,r*.9);g.stroke();
+    el(g,r*.22,r*.58,r*.18,r*.09,'#5fae4a',0);}),
+  rapid:iconCanvas((g,r)=>{g.fillStyle='#ffd23e';g.strokeStyle=OUT;g.lineWidth=r*.1;
+    for(const o of[-.3,.3]){g.beginPath();g.ellipse(o*r*.5,0,r*.8,r*.28,0,0,TAU);g.fill();g.stroke();}}),
   nova:iconCanvas((g,r)=>{g.fillStyle='#ff6a8a';g.strokeStyle=OUT;g.lineWidth=r*.11;
     g.beginPath();for(let i=0;i<10;i++){const a=i/10*TAU,rr=i%2?r*.45:r*.9;
       g.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);}g.closePath();g.fill();g.stroke();
@@ -405,9 +413,12 @@ const STK={
   shark:fishSpr(38,'#8aa8c8'),
   rose:roseSpr,
   bone:boneSpr,
+  blade:toon(18,(g,r)=>{g.fillStyle='#ff5a6a';g.strokeStyle='#fff';g.lineWidth=r*.18;
+    g.beginPath();g.arc(0,0,r*.9,-.7,.7);g.arc(r*.5,0,r*.7,.7,-.7,true);g.closePath();g.fill();g.stroke();}),
   // items
   coin:badge('🪙',24),chicken:badge('🍗',30),
   it_nuke:badge('💥',30),it_bolt:badge('⚡',30),it_frz:badge('💤',30),it_hole:badge('🌀',30),
+  it_rage:badge('😤',30),it_gat:badge('🔫',30),it_clone:badge('👯',30),it_inv:badge('✨',30),it_nocd:badge('♾️',30),
 };
 // ================= stage backgrounds (muted, no clutter) =================
 function mkBg(base,fn){const c=document.createElement('canvas');c.width=c.height=420;
