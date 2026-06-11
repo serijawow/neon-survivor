@@ -13,7 +13,8 @@ const IS_TOUCH=matchMedia('(pointer:coarse)').matches;
 
 // ================= save / profile =================
 const SVKEY='nyang_v3';
-let SV={name:'',coins:0,owned:[],cat:'a',up:{hp:0,dmg:0,spd:0,mag:0,coin:0,luck:0},maxStage:1,clears:{},mute:false};
+let SV={name:'',coins:0,owned:[],cat:'a',up:{hp:0,dmg:0,spd:0,mag:0,coin:0,luck:0},maxStage:1,clears:{},mute:false,master:false};
+let masterSel=false;
 (function(){
   try{const raw=localStorage.getItem(SVKEY);
     if(raw){const o=JSON.parse(raw);Object.assign(SV,o);SV.up=Object.assign({hp:0,dmg:0,spd:0,mag:0,coin:0,luck:0},o.up||{});}
@@ -450,11 +451,11 @@ const MOB={
 // ================= run state =================
 let state='menu',stage=1,ST=STAGES[0];
 let gTime=0,kills=0,combo=0,comboT=0,maxCombo=0,lastMile=0,runCoins=0;
-let player=null,enemies=[],bullets=[],ebullets=[],gems=[],coinDrops=[],drops=[],parts=[],floaters=[],fxs=[],banners=[],zones=[],turrets=[];
+let player=null,enemies=[],bullets=[],ebullets=[],gems=[],coinDrops=[],drops=[],parts=[],floaters=[],fxs=[],banners=[],zones=[],turrets=[],obstacles=[];
 let cam={x:0,y:0},shake=0,freezeT=0,slowT=0,flashR=0,flashW=0;
 let spawnT=0,pendingLv=0,levelDelay=0,fishAng=0,walkT=0,tutT=4;
 let bossOn=false,bossDone=false,eliteDone=false,midDone=false,frzT=0,skillCd=0,cdT=0,lastCdN=0,echoQ=[];
-let surged=[],hitStop=0;
+let surged=[],hitStop=0,masterMode=false;
 let joy={on:false,id:-1,ax:0,ay:0,dx:0,dy:0};
 const keys={};
 function curCat(){return CATS.find(c=>c.key===SV.cat)||CATS[0];}
@@ -472,7 +473,7 @@ function resetRun(){
   cam={x:0,y:0};shake=0;freezeT=0;slowT=0;flashR=0;flashW=0;spawnT=.5;
   pendingLv=0;levelDelay=0;walkT=0;tutT=4;gemStreak=0;
   bossOn=false;bossDone=false;eliteDone=false;midDone=false;frzT=0;skillCd=0;echoQ=[];
-  surged=[];hitStop=0;clones=[];holeT=0;window.__e2=false;}
+  surged=[];hitStop=0;clones=[];holeT=0;window.__e2=false;genObstacles();}
 function recompute(){
   player.speed=player.baseSpeed*(1+player.pass.spd);
   player.magnet=95*(1+SV.up.mag*.18)*(1+player.pass.mag);
@@ -498,6 +499,37 @@ function clampArena(o,pr){const s=ST.shape;
     if(d<1){o.x=s.r+pr;o.y=0;return;}
     if(d>s.R-pr){o.x*=(s.R-pr)/d;o.y*=(s.R-pr)/d;}
     else if(d<s.r+pr){o.x*=(s.r+pr)/d;o.y*=(s.r+pr)/d;}}}
+// ===== map obstacles: themed props that block movement or slow you down =====
+const OBSDEF={
+  0:{n:7,type:'bush',r:[24,38],solid:1},      // 풀밭
+  1:{n:8,type:'car',r:[46,62],solid:1},       // 주차장
+  2:{n:6,type:'sand',r:[72,108],slow:.55},    // 모래밭
+  3:{n:10,type:'crate',r:[24,38],solid:1},    // 시장
+  4:{n:7,type:'vent',r:[32,48],solid:1},      // 옥상
+  5:{n:6,type:'puddle',r:[64,96],slow:.5},    // 하수도
+  6:{n:10,type:'rock',r:[28,46],solid:1},     // 오솔길
+  7:{n:9,type:'rock',r:[30,50],solid:1},      // 정상
+};
+function genObstacles(){
+  obstacles=[];const s=ST.shape;
+  const D=OBSDEF[ST.bg]||OBSDEF[0];
+  let cnt=D.n+(masterMode?3:0);
+  let seed=ST.bg*131+stage*7+11;const sr=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+  for(let i=0;i<cnt;i++){let x=0,y=0,ok=false,tries=0;
+    while(!ok&&tries++<25){
+      if(s.k==='rect'){x=(sr()-.5)*(s.w-160);y=(sr()-.5)*(s.h-160);}
+      else{const a=sr()*TAU,rr=s.k==='circ'?sr()*(s.R-120):(s.r+80)+sr()*(s.R-s.r-160);
+        x=Math.cos(a)*rr;y=Math.sin(a)*rr;}
+      ok=Math.hypot(x,y)>180;
+      for(const o of obstacles)if(dist2(x,y,o.x,o.y)<(o.r+70)*(o.r+70))ok=false;}
+    if(!ok)continue;
+    const r=D.r[0]+sr()*(D.r[1]-D.r[0]);
+    obstacles.push({x,y,r,type:D.type,solid:D.solid||0,slow:D.slow||0,rot:(sr()-.5)*.4,w:r*1.5,h:r});}
+}
+function resolveObstacles(o,pr){for(const ob of obstacles){if(!ob.solid)continue;
+  let dx=o.x-ob.x,dy=o.y-ob.y,d=Math.hypot(dx,dy),min=ob.r+pr;
+  if(d<min){if(d<.01){dx=1;dy=0;d=1;}o.x=ob.x+dx/d*min;o.y=ob.y+dy/d*min;}}}
+function terrainMul(x,y){for(const ob of obstacles)if(ob.slow&&dist2(x,y,ob.x,ob.y)<ob.r*ob.r)return 1-ob.slow;return 1;}
 function outOfArena(x,y,pr){const s=ST.shape;pr=pr||0;
   if(s.k==='rect')return x<-s.w/2+pr||x>s.w/2-pr||y<-s.h/2+pr||y>s.h/2-pr;
   const dd=Math.hypot(x,y);
@@ -522,6 +554,13 @@ function spawnEnemy(type,ax,ay){
   const e={type,stk:d.stk,x,y,r:d.r,hp:d.hp*(d.boss?(1+(stage-1)*.16):mobHpMul()),
     maxhp:0,sp:d.sp*(d.boss?1:mobSpMul()),xp:d.xp,dmg:d.dmg,coin:d.coin||0,beh:d.beh,boss:d.boss||null,mid:d.mid||false,
     flash:0,bIT:0,wob:rnd(0,TAU),kx:0,ky:0,st:{},vx:0,vy:0,meals:0,scale:1,face:1,stun:0,elite:false,sq:0};
+  if(masterMode){
+    if(e.boss){e.hp*=1.5;e.dmg=Math.round(e.dmg*1.2);}
+    else{e.hp*=1.7;e.dmg+=4;e.xp+=1;
+      const m=Math.random();
+      if(m<.3){e.sp*=1.5;e.mut='fast';}
+      else if(m<.55){e.hp*=1.4;e.noKb=1;e.mut='tank';}
+      else if(m<.78){e.dmg=Math.round(e.dmg*1.5);e.mut='fierce';}}}
   e.maxhp=e.hp;clampArena(e,e.r);enemies.push(e);return e;}
 function spawnElite(type){
   const e=spawnEnemy(type);if(!e)return;
@@ -588,7 +627,7 @@ function damageEnemy(e,dmg,hx,hy){
   // hit spark + floating number (numbers scale-pop)
   hitSpark(hx!==undefined?(hx+e.x)/2:e.x,hy!==undefined?(hy+e.y)/2:e.y,crit);
   floater(e.x+rnd(-8,8),e.y-e.r*e.scale-6,crit?v+'!':''+v,crit?'#ffd23e':'#fff',crit);
-  if(hx!==undefined&&!e.boss){const d=Math.sqrt(dist2(hx,hy,e.x,e.y))||1;
+  if(hx!==undefined&&!e.boss&&!e.noKb){const d=Math.sqrt(dist2(hx,hy,e.x,e.y))||1;
     e.kx+=(e.x-hx)/d*88;e.ky+=(e.y-hy)/d*88;}
   // micro hit-stop scales with damage → weight/impact
   if(v>=18)hitStop=Math.max(hitStop,crit?.05:.035);
@@ -1259,25 +1298,31 @@ function updateEnemy(e,dt){
   e.x+=e.kx*dt;e.y+=e.ky*dt;
   e.kx*=Math.pow(.002,dt);e.ky*=Math.pow(.002,dt);
   clampArena(e,e.r*e.scale*.7);
+  if(obstacles.length&&!e.boss&&!e.air)resolveObstacles(e,e.r*e.scale*.55);
   const dd=Math.hypot(player.x-e.x,player.y-e.y);
   if(player.iT<=0&&!e.air&&dd<e.r*e.scale+player.r)hurtPlayer(e.dmg+(e.meals||0)*2);}
 // ================= flow =================
 function stageCleared(){
   bossDone=true;state='clear';sClear();slowT=.9;
-  const bonus=Math.round((15+stage*6)*(1+SV.up.coin*.2));
+  let bonus=Math.round((15+stage*6)*(1+SV.up.coin*.2));
+  if(masterMode)bonus=Math.round(bonus*2.2);
   runCoins+=bonus;SV.coins+=bonus;
-  const prev=SV.clears[stage];
-  if(!prev||gTime<prev)SV.clears[stage]=Math.round(gTime);
-  if(stage>=SV.maxStage&&stage<STAGES.length)SV.maxStage=stage+1;
+  const ck=(masterMode?'m':'')+stage;
+  const prev=SV.clears[ck];
+  if(!prev||gTime<prev)SV.clears[ck]=Math.round(gTime);
+  if(!masterMode&&stage>=SV.maxStage&&stage<STAGES.length)SV.maxStage=stage+1;
+  const justUnlockedMaster=!SV.master&&!masterMode&&stage>=STAGES.length;
+  if(justUnlockedMaster)SV.master=true;
   save();
   burst(player.x,player.y,['#ffe066','#7ec8ff','#ff8ad8'],80,12);
   banner('🏆 스테이지 클리어!!','#ffe066',2.2);
   setTimeout(()=>{
-    $('rTitle').textContent='클리어! 🏆';
+    $('rTitle').textContent=masterMode?'달인 클리어! 🔥':'클리어! 🏆';
     $('rSub').textContent=ST.icon+' '+ST.n+(stage<STAGES.length?' → 다음 동네가 열렸다!':' — 동네 평정 완료!!');
     $('rTime').textContent=fmtT(gTime);$('rKills').textContent=kills;
     $('rLv').textContent=player.level;$('rCoins').textContent=runCoins;
-    $('rHint').innerHTML=stage>=STAGES.length?'🎉 <b>모든 스테이지 클리어!</b> 당신은 전설의 고양이!':'클리어 보너스 🪙'+bonus+' 획득!';
+    $('rHint').innerHTML=justUnlockedMaster?'🎉 <b>모든 스테이지 클리어!</b> 🔥<b>달인 고양이 모드</b> 해금!! (스테이지 선택에서 ON)'
+      :stage>=STAGES.length?'🎉 <b>동네 평정!</b> 당신은 전설의 고양이!':'클리어 보너스 🪙'+bonus+' 획득!';
     $('rNext').classList.toggle('hidden',stage>=STAGES.length);
     hide('hudBtns');show('results');state='results';},1600);}
 function gameOver(){
@@ -1312,8 +1357,11 @@ function update(dt){
   const ml=Math.hypot(mx,my);
   if(ml>0){mx/=ml;my/=ml;player.fx=mx;player.fy=my;
     if(Math.abs(mx)>.2)player.face=mx<0?-1:1;
-    player.x+=mx*player.speed*dt;player.y+=my*player.speed*dt;walkT+=dt;}
+    const tm=obstacles.length?terrainMul(player.x,player.y):1;
+    if(tm<1&&Math.random()<dt*8)parts.push({x:player.x+rnd(-10,10),y:player.y+12,vx:rnd(-1,1),vy:-rnd(.5,1.5),life:.4,col:'#e0c896',sz:rnd(3,6),puff:1});
+    player.x+=mx*player.speed*tm*dt;player.y+=my*player.speed*tm*dt;walkT+=dt;}
   clampArena(player,player.r);
+  if(obstacles.length)resolveObstacles(player,player.r);
   player.iT-=dt;player.shieldT-=dt;frzT-=dt;skillCd-=dt;
   // dopamine buff timers
   for(const k in player.buffs){player.buffs[k]-=dt;if(player.buffs[k]<=0)delete player.buffs[k];}
@@ -1484,6 +1532,52 @@ function drawStk(s,x,y,rot,scale,flip){
   if(rot)ctx.rotate(rot);
   ctx.scale((flip?-1:1)*(scale||1),scale||1);
   ctx.drawImage(s.n,-s.half,-s.half);ctx.restore();}
+function drawObstacle(ob){
+  const x=ob.x,y=ob.y,r=ob.r;
+  if(ob.slow){ // sand pit / puddle — translucent blob, no outline
+    ctx.globalAlpha=.5;ctx.fillStyle=ob.type==='puddle'?'#5a8a9a':'#e0c081';
+    ctx.beginPath();ctx.ellipse(x,y,r,r*.8,ob.rot,0,TAU);ctx.fill();
+    ctx.globalAlpha=.3;ctx.fillStyle=ob.type==='puddle'?'#7fb0c0':'#f0d8a8';
+    ctx.beginPath();ctx.ellipse(x,y,r*.7,r*.5,ob.rot,0,TAU);ctx.fill();
+    ctx.globalAlpha=1;return;}
+  // shadow
+  ctx.globalAlpha=.2;ctx.fillStyle='#1c3206';
+  ctx.beginPath();ctx.ellipse(x,y+r*.5,r*.95,r*.34,0,0,TAU);ctx.fill();ctx.globalAlpha=1;
+  ctx.save();ctx.translate(x,y);ctx.rotate(ob.rot);ctx.lineJoin='round';
+  const L='#5a4632';
+  if(ob.type==='car'){
+    const w=r*1.7,h=r*1.05;
+    ctx.fillStyle=['#e85a5a','#5a9be8','#ffd23e','#7ec85e','#b888e8'][(x*7+y)&3||0];
+    ctx.strokeStyle=L;ctx.lineWidth=4;
+    rr(-w/2,-h/2,w,h,10);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#cfe6ff';rr(-w*.32,-h*.34,w*.64,h*.32,5);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#3a2e22';ctx.beginPath();ctx.arc(-w*.3,h*.5,r*.22,0,TAU);ctx.arc(w*.3,h*.5,r*.22,0,TAU);ctx.fill();
+  }else if(ob.type==='bush'){
+    ctx.fillStyle='#5fa343';ctx.strokeStyle='#3a6b1e';ctx.lineWidth=3.5;
+    ctx.beginPath();for(let i=0;i<7;i++){const a=i/7*TAU,rr2=r*(.8+.2*Math.sin(i*3));
+      ctx.lineTo(Math.cos(a)*rr2,Math.sin(a)*rr2*.85);}ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle='#6fb851';ctx.beginPath();ctx.arc(-r*.2,-r*.2,r*.4,0,TAU);ctx.fill();
+    ctx.fillStyle='#ff8ab0';for(const p of[[-.3,.1],[.4,-.1],[.1,.3]]){ctx.beginPath();ctx.arc(p[0]*r,p[1]*r,r*.12,0,TAU);ctx.fill();}
+  }else if(ob.type==='crate'){
+    ctx.fillStyle='#c89a5e';ctx.strokeStyle=L;ctx.lineWidth=4;
+    rr(-r,-r,r*2,r*2,6);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(-r,-r);ctx.lineTo(r,r);ctx.moveTo(r,-r);ctx.lineTo(-r,r);ctx.stroke();
+  }else if(ob.type==='vent'){
+    ctx.fillStyle='#9aa0a8';ctx.strokeStyle=L;ctx.lineWidth=4;
+    rr(-r,-r*.8,r*2,r*1.6,6);ctx.fill();ctx.stroke();
+    ctx.strokeStyle='#6a6f78';ctx.lineWidth=3;
+    for(let i=-2;i<=2;i++){ctx.beginPath();ctx.moveTo(-r*.8,i*r*.3);ctx.lineTo(r*.8,i*r*.3);ctx.stroke();}
+  }else{ // rock
+    ctx.fillStyle='#9a928a';ctx.strokeStyle='#6a625a';ctx.lineWidth=4;
+    ctx.beginPath();for(let i=0;i<7;i++){const a=i/7*TAU,rr2=r*(.78+.22*Math.sin(i*2.3));
+      ctx.lineTo(Math.cos(a)*rr2,Math.sin(a)*rr2);}ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle='#b0a89e';ctx.beginPath();ctx.arc(-r*.25,-r*.25,r*.4,0,TAU);ctx.fill();
+    ctx.fillStyle='#5fae4a';ctx.beginPath();ctx.ellipse(r*.2,-r*.5,r*.3,r*.14,0,0,TAU);ctx.fill();
+  }
+  ctx.restore();
+  function rr(bx,by,bw,bh,rad){ctx.beginPath();
+    ctx.moveTo(bx+rad,by);ctx.arcTo(bx+bw,by,bx+bw,by+bh,rad);ctx.arcTo(bx+bw,by+bh,bx,by+bh,rad);
+    ctx.arcTo(bx,by+bh,bx,by,rad);ctx.arcTo(bx,by,bx+bw,by,rad);ctx.closePath();}}
 function drawEb(b){ // hostile bullet: red halo + core
   ctx.globalAlpha=.4+.15*Math.sin(performance.now()/90);
   ctx.fillStyle='#ff3c3c';
@@ -1527,6 +1621,8 @@ function draw(){
   if(shake>.4)ctx.translate(rnd(-shake,shake),rnd(-shake,shake));
   drawArena(ox,oy);
   ctx.translate(ox,oy);
+  // map obstacles (under everything)
+  for(const ob of obstacles)drawObstacle(ob);
   // zones — solid translucent red
   for(const z of zones){
     if(z.warn>0){const pr=1-z.warn/z.max;
@@ -2078,10 +2174,12 @@ $('cut').addEventListener('pointerdown',()=>{
   if(state!=='cutscene')return;
   hide('cut');state='playing';ac();sMeow();
   banner('STAGE '+stage+' · '+ST.n+' '+ST.icon,'#fff',1.8);
+  if(masterMode)setTimeout(()=>{if(state==='playing')banner('🔥 달인 고양이 모드!! 조심하라냥','#ff5f3c',2);},700);
   if(cutDone){cutDone();cutDone=null;}});
 // ================= run start =================
 function startStage(n){
   stage=n;ST=STAGES[n-1];
+  masterMode=masterSel&&SV.master;
   resetRun();ac();
   hide('menu');hide('results');show('hudBtns');
   setSong(ST.bg);
@@ -2101,15 +2199,26 @@ function refreshMenu(){
   hc.appendChild(img);
   $('btnPlay').disabled=!SV.owned.length;
   $('btnPlay').textContent=SV.owned.length?'▶ 모험 떠나기':'먼저 고양이를 영입하자!';
+  // master-mode toggle (after clearing all 8)
+  let mt=$('masterToggle');
+  if(SV.master){
+    if(!mt){mt=document.createElement('button');mt.id='masterToggle';mt.className='big';
+      $('stageGrid').parentNode.insertBefore(mt,$('stageGrid'));}
+    mt.style.display='block';
+    mt.textContent=masterSel?'🔥 달인 고양이 모드: ON (몹 진화·장애물 강화)':'😺 일반 모드 (탭해서 달인 모드)';
+    mt.style.background=masterSel?'linear-gradient(180deg,#ff5f3c,#c0392b)':'';
+    mt.onclick=()=>{masterSel=!masterSel;sPick();refreshMenu();};
+  }else if(mt)mt.style.display='none';
   // stages
   const sg=$('stageGrid');sg.innerHTML='';
   STAGES.forEach((st,i)=>{
     const n=i+1,unlocked=n<=SV.maxStage;
+    const ck=(masterSel?'m':'')+n;
     const el=document.createElement('div');
     el.className='stg'+(unlocked?'':' lock')+(n===stage?' cur':'');
     el.innerHTML=`<div class="si">${unlocked?st.icon:'🔒'}</div>
       <div class="sn">${n}. ${st.n}</div>
-      <div class="sc">${SV.clears[n]?'✔ '+fmtT(SV.clears[n]):''}</div>`;
+      <div class="sc">${SV.clears[ck]?'✔ '+fmtT(SV.clears[ck]):''}</div>`;
     el.onclick=()=>{if(!unlocked){sHiss();toast('이전 스테이지를 먼저 클리어!');return;}
       stage=n;ST=STAGES[n-1];sPick();refreshMenu();
       $('stageDesc').innerHTML='<b>'+st.icon+' '+st.n+'</b> — '+st.d+'<br>👹 보스: '+(st.boss==='duo'?'파리&모기 범죄듀오':MOB[st.boss].boss);};
