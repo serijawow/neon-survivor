@@ -41,17 +41,13 @@
   button.ghost{background:linear-gradient(180deg,#f3ead6,#e7dcc4);color:#7a6a52;text-shadow:none;
     font-size:min(4vw,15px);padding:10px 24px;box-shadow:0 4px 0 #b9ac92}
   button.ghost:active{box-shadow:0 1px 0 #b9ac92}
-  /* puffy candy buttons — glossy top, soft 3D, bouncy */
-  button.big{display:block;width:100%;margin:9px 0;padding:16px 18px;font-size:min(5.9vw,22px);
-    position:relative;overflow:hidden;border-width:3.5px;
-    border-radius:32px 26px 34px 28px/28px 34px 26px 32px;text-shadow:0 2px 0 rgba(90,50,20,.35);
-    box-shadow:0 6px 0 #5b4632,0 11px 16px rgba(0,0,0,.24),inset 0 3px 0 rgba(255,255,255,.55),inset 0 -5px 0 rgba(0,0,0,.13)}
-  button.big::after{content:'';position:absolute;left:7%;right:7%;top:5px;height:36%;border-radius:18px;
-    background:linear-gradient(180deg,rgba(255,255,255,.6),rgba(255,255,255,0));pointer-events:none}
-  button.big:active{transform:translateY(4px);box-shadow:0 2px 0 #5b4632,inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.12)}
-  button.blue{background:linear-gradient(180deg,#86d6f7,#46a8e2)}
-  button.green{background:linear-gradient(180deg,#aee472,#6dc23f)}
-  button.pink{background:linear-gradient(180deg,#ffb0d2,#ff7aa8)}
+  /* clean buttons — white fill, orange outline + orange text */
+  button.big{display:block;width:100%;margin:9px 0;padding:15px 18px;font-size:min(5.8vw,22px);
+    border:3px solid #ff8c2f;border-radius:24px;background:#fff;color:#ff7a2f;text-shadow:none;
+    box-shadow:0 4px 0 #ffd9b0;transition:transform .08s,box-shadow .08s,background .1s}
+  button.big:active{transform:translateY(3px);box-shadow:0 1px 0 #ffd9b0;background:#fff4e6}
+  button.big:disabled{filter:none;opacity:.5}
+  button.blue,button.green,button.pink{background:#fff;color:#ff7a2f}
   button:disabled{filter:grayscale(.8);opacity:.6;transform:none}
   input{border:3px solid #5a4632;border-radius:14px;padding:12px;font-size:18px;font-weight:800;
     font-family:inherit;width:100%;text-align:center;background:#fff;color:#4a3b2a;outline:none}
@@ -172,10 +168,18 @@
     <button id="btnPlay" class="big green">▶ 모험 떠나기</button>
     <button id="btnCats" class="big blue">🐱 고양이</button>
     <button id="btnShop" class="big pink">⬆ 능력 업그레이드</button>
+    <button id="btnRank" class="big">🏆 전국 랭킹</button>
     <div>
       <button id="btnInvite" class="ghost">📤 친구 초대</button>
-      <button id="btnCode" class="ghost">💾 이어하기 코드</button>
+      <button id="btnCode" class="ghost">💾 저장 / 이어하기</button>
     </div>
+  </div>
+  <div class="panel hidden" id="scrRank">
+    <div class="topbar"><b style="font-size:18px">🏆 전국 랭킹</b><span class="coins" id="coinLabel5"></span></div>
+    <div class="sub" style="margin:2px 0">스테이지를 빠르게 클리어할수록 순위 ↑</div>
+    <div id="rankTabs" style="display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin:8px 0"></div>
+    <div id="rankList" style="min-height:160px;text-align:left;font-size:14px"></div>
+    <button class="ghost backBtn">← 뒤로</button>
   </div>
   <div class="panel hidden" id="scrStage">
     <div class="topbar"><b style="font-size:18px">🗺 스테이지</b><span class="coins" id="coinLabel2"></span></div>
@@ -196,13 +200,18 @@
     <button class="ghost backBtn">← 뒤로</button>
   </div>
   <div class="panel hidden" id="scrCode">
-    <b style="font-size:18px">💾 이어하기 코드</b>
-    <div class="sub">코드를 복사해두면 다른 기기/브라우저에서<br>진행 상황을 이어할 수 있어요.</div>
-    <textarea id="codeText" readonly></textarea>
-    <button id="codeCopy" class="ghost">📋 복사</button>
-    <div class="sub" style="margin-top:10px"><b>코드 입력</b>으로 불러오기:</div>
-    <textarea id="codeInput" placeholder="여기에 코드 붙여넣기"></textarea>
-    <button id="codeImport" class="ghost">불러오기</button>
+    <b style="font-size:18px">☁️ 클라우드 저장</b>
+    <div class="sub">이름 + 4자리 PIN으로 어느 기기에서나 이어하기!</div>
+    <input id="cloudPin" maxlength="6" placeholder="나만의 PIN (숫자 4자리 등)" style="margin-bottom:8px">
+    <div style="display:flex;gap:8px"><button id="cloudSaveBtn" class="ghost" style="flex:1">☁️ 저장하기</button>
+      <button id="cloudLoadBtn" class="ghost" style="flex:1">📥 불러오기</button></div>
+    <div class="sub" id="cloudMsg" style="min-height:18px;margin:6px 0;color:#5aa843"></div>
+    <hr style="border:none;border-top:2px dashed #cdbfa4;margin:8px 0">
+    <b style="font-size:15px">💾 오프라인 코드</b>
+    <textarea id="codeText" readonly style="height:48px"></textarea>
+    <div style="display:flex;gap:8px"><button id="codeCopy" class="ghost" style="flex:1">📋 코드 복사</button></div>
+    <textarea id="codeInput" placeholder="코드 붙여넣어 불러오기" style="height:48px"></textarea>
+    <button id="codeImport" class="ghost">코드로 불러오기</button>
     <button class="ghost backBtn">← 뒤로</button>
   </div>
 </div>

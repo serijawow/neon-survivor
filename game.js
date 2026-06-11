@@ -40,6 +40,29 @@ function impCode(s){try{const[b,c]=s.trim().split('.');
   if(h.toString(36)!==c)return false;
   const o=JSON.parse(j);if(!o||typeof o.coins!=='number')return false;
   SV=Object.assign(SV,o);save();return true;}catch(e){return false;}}
+// ================= cloud (Supabase REST) =================
+const CLOUD={url:'https://hqfdtnuczxtyfnbjjfye.supabase.co/rest/v1',
+  key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxZmR0bnVjenh0eWZuYmpqZnllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMDAxMTYsImV4cCI6MjA5Njc3NjExNn0.n6OxJ0qPZh6RmCyVDLfYrkyTH20P8pRs0joGsSDvV5M'};
+function sbH(extra){return Object.assign({apikey:CLOUD.key,Authorization:'Bearer '+CLOUD.key,'Content-Type':'application/json'},extra||{});}
+async function sbGet(path){const r=await fetch(CLOUD.url+path,{headers:sbH()});if(!r.ok)throw 0;return r.json();}
+async function submitScore(stg,time,master){try{
+  await fetch(CLOUD.url+'/scores',{method:'POST',headers:sbH({Prefer:'return=minimal'}),
+    body:JSON.stringify({name:SV.name||'고양이',stage:stg,best_time:time,master:!!master})});}catch(e){}}
+async function fetchBoard(stg,master){
+  return sbGet('/scores?stage=eq.'+stg+'&master=eq.'+(master?'true':'false')+'&order=best_time.asc&limit=20&select=name,best_time');}
+async function cloudSave(name,pin){
+  // refuse to overwrite someone else's name unless the PIN matches
+  try{const ex=await sbGet('/saves?name=eq.'+encodeURIComponent(name)+'&select=pin');
+    if(ex.length&&ex[0].pin!==pin)return 'pin';}catch(e){}
+  const r=await fetch(CLOUD.url+'/saves',{method:'POST',headers:sbH({Prefer:'resolution=merge-duplicates,return=minimal'}),
+    body:JSON.stringify({name,pin,data:SV})});
+  return r.ok?'ok':'err';}
+async function cloudLoad(name,pin){
+  const rows=await sbGet('/saves?name=eq.'+encodeURIComponent(name)+'&select=*');
+  if(!rows.length)return 'none';
+  if(rows[0].pin!==pin)return 'pin';
+  const o=rows[0].data;if(!o||typeof o.coins!=='number')return 'bad';
+  SV=Object.assign(SV,o);SV.up=Object.assign({hp:0,dmg:0,spd:0,mag:0,coin:0,luck:0},o.up||{});save();return 'ok';}
 function toast(msg){const t=$('toast');t.textContent=msg;t.style.opacity=1;
   clearTimeout(toast._t);toast._t=setTimeout(()=>t.style.opacity=0,1700);}
 
@@ -1443,9 +1466,10 @@ function stageCleared(){
   let bonus=Math.round((15+stage*6)*(1+SV.up.coin*.2));
   if(masterMode)bonus=Math.round(bonus*2.2);
   runCoins+=bonus;SV.coins+=bonus;
-  const ck=(masterMode?'m':'')+stage;
+  const ck=(masterMode?'m':'')+stage,clearT=Math.round(gTime);
   const prev=SV.clears[ck];
-  if(!prev||gTime<prev)SV.clears[ck]=Math.round(gTime);
+  if(!prev||gTime<prev)SV.clears[ck]=clearT;
+  if(SV.name)submitScore(stage,clearT,masterMode); // post to global leaderboard
   if(!masterMode&&stage>=SV.maxStage&&stage<STAGES.length)SV.maxStage=stage+1;
   const justUnlockedMaster=!SV.master&&!masterMode&&stage>=STAGES.length;
   if(justUnlockedMaster)SV.master=true;
@@ -2409,12 +2433,14 @@ function startStage(n){
   showCutscene();}
 // ================= menu =================
 function nav(scr){
-  for(const s of['scrHome','scrStage','scrShop','scrCats','scrCode'])hide(s);
-  show(scr);refreshMenu();}
+  for(const s of['scrHome','scrStage','scrShop','scrCats','scrCode','scrRank'])hide(s);
+  show(scr);refreshMenu();
+  if(scr==='scrRank')openRank();
+  if(scr==='scrCode')$('codeText').value=expCode();}
 function refreshMenu(){
   $('nickLabel').textContent='🐱 '+(SV.name||'고양이')+'냥';
-  for(const id of['coinLabel','coinLabel2','coinLabel3','coinLabel4'])
-    $(id).textContent='🪙 '+SV.coins;
+  for(const id of['coinLabel','coinLabel2','coinLabel3','coinLabel4','coinLabel5'])
+    if($(id))$(id).textContent='🪙 '+SV.coins;
   // home cat preview
   const hc=$('homeCat');hc.innerHTML='';
   const img=document.createElement('img');
@@ -2482,7 +2508,52 @@ $('btnPlay').onclick=()=>nav('scrStage');
 $('btnShop').onclick=()=>nav('scrShop');
 $('btnCats').onclick=()=>nav('scrCats');
 $('btnCode').onclick=()=>nav('scrCode');
+$('btnRank').onclick=()=>nav('scrRank');
 for(const b of document.querySelectorAll('.backBtn'))b.onclick=()=>nav('scrHome');
+// ---- leaderboard ----
+let rankStage=1,rankMaster=false;
+function openRank(){
+  const tabs=$('rankTabs');tabs.innerHTML='';
+  for(let i=1;i<=STAGES.length;i++){const b=document.createElement('button');
+    b.className='ghost';b.style.cssText='padding:7px 11px;font-size:13px;margin:0';
+    b.textContent=i+(i<=SV.maxStage?'':'🔒');
+    if(i===rankStage)b.style.background='#ffd9b0';
+    b.onclick=()=>{rankStage=i;openRank();};tabs.appendChild(b);}
+  if(SV.master){const mb=document.createElement('button');mb.className='ghost';
+    mb.style.cssText='padding:7px 11px;font-size:13px;margin:0';
+    mb.textContent=rankMaster?'🔥달인':'😺일반';
+    mb.style.background=rankMaster?'#ffb89a':'';
+    mb.onclick=()=>{rankMaster=!rankMaster;openRank();};tabs.appendChild(mb);}
+  const list=$('rankList');list.innerHTML='<div style="text-align:center;color:#9a8a6e;padding:30px">불러오는 중… ⏳</div>';
+  fetchBoard(rankStage,rankMaster).then(rows=>{
+    if(!rows.length){list.innerHTML='<div style="text-align:center;color:#9a8a6e;padding:30px">아직 기록이 없어요.<br>1등이 되어보세요! 🏆</div>';return;}
+    list.innerHTML=rows.map((r,i)=>{const m=['🥇','🥈','🥉'][i]||('<b style="color:#9a8a6e">'+(i+1)+'</b>');
+      const mine=r.name===SV.name;
+      return '<div style="display:flex;justify-content:space-between;padding:5px 8px;border-radius:8px;'+(mine?'background:#fff0d8;font-weight:900':'')+'">'
+        +'<span>'+m+' '+esc(r.name)+'</span><span style="color:#c9820a">'+fmtT(r.best_time)+'</span></div>';}).join('');
+  }).catch(()=>{list.innerHTML='<div style="text-align:center;color:#c0392b;padding:30px">랭킹을 못 불러왔어요 😿<br>잠시 후 다시 시도해주세요.</div>';});}
+function esc(s){return (s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
+// ---- cloud save / load ----
+$('cloudSaveBtn').onclick=async()=>{
+  const pin=($('cloudPin').value||'').trim();
+  if(!SV.name){toast('이름이 없어요');return;}
+  if(pin.length<3){$('cloudMsg').style.color='#c0392b';$('cloudMsg').textContent='PIN을 3자 이상 입력해주세요.';return;}
+  $('cloudMsg').style.color='#9a8a6e';$('cloudMsg').textContent='저장 중… ⏳';
+  try{const r=await cloudSave(SV.name,pin);
+    if(r==='ok'){$('cloudMsg').style.color='#5aa843';$('cloudMsg').textContent='☁️ 저장 완료! ('+SV.name+')';}
+    else if(r==='pin'){$('cloudMsg').style.color='#c0392b';$('cloudMsg').textContent='이 이름은 다른 PIN으로 이미 저장돼 있어요.';}
+    else{$('cloudMsg').style.color='#c0392b';$('cloudMsg').textContent='저장 실패 😿';}}
+  catch(e){$('cloudMsg').style.color='#c0392b';$('cloudMsg').textContent='연결 오류 😿';}};
+$('cloudLoadBtn').onclick=async()=>{
+  const pin=($('cloudPin').value||'').trim();
+  if(!SV.name){toast('이름이 없어요');return;}
+  $('cloudMsg').style.color='#9a8a6e';$('cloudMsg').textContent='불러오는 중… ⏳';
+  try{const r=await cloudLoad(SV.name,pin);
+    if(r==='ok'){$('cloudMsg').style.color='#5aa843';$('cloudMsg').textContent='📥 불러오기 성공! 🎉';refreshMenu();}
+    else if(r==='none'){$('cloudMsg').style.color='#c0392b';$('cloudMsg').textContent="'"+SV.name+"' 이름의 저장이 없어요.";}
+    else if(r==='pin'){$('cloudMsg').style.color='#c0392b';$('cloudMsg').textContent='PIN이 일치하지 않아요.';}
+    else{$('cloudMsg').style.color='#c0392b';$('cloudMsg').textContent='데이터가 손상됐어요.';}}
+  catch(e){$('cloudMsg').style.color='#c0392b';$('cloudMsg').textContent='연결 오류 😿';}};
 $('stageGo').onclick=()=>{if(!SV.owned.length){toast('먼저 고양이를 영입하자!');nav('scrCats');return;}
   startStage(stage);};
 $('btnInvite').onclick=async()=>{
