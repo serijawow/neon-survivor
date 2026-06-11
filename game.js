@@ -363,7 +363,9 @@ const PASS={spd:{icon:'spd',name:'캣닙 질주',d:t=>'이동속도 +'+Math.roun
   dmg:{icon:'dmg',name:'매운맛 발톱',d:t=>'모든 공격력 +'+Math.round(PV.dmg[t]*100)+'%'},
   cd:{icon:'cd',name:'꾹꾹이 오버클럭',d:t=>'모든 쿨다운 -'+Math.round(PV.cd[t]*100)+'%'}};
 const TCOL={C:'#9aa39b',B:'#4f9bff',A:'#b66dff',S:'#ffb02f',SS:'#ff4f8a'};
-function rollTier(){let r=Math.random()-SV.up.luck*.05;
+function rollTier(boost){
+  // higher r → higher tier, so luck/boost ADD to r (was subtracting = made cards worse)
+  let r=Math.random()+SV.up.luck*.05+((player&&player.luck||0)*.045)+(boost||0);
   return r<.45?'C':r<.74?'B':r<.9?'A':r<.975?'S':'SS';}
 // ================= dopamine drop-skills (powerful, brief, consumable) =================
 const SKILLS={
@@ -390,10 +392,10 @@ const STAGES=[
    waves:[{t:0,rate:.8,pool:[['mouse',4],['fly',3]]},{t:22,rate:.58,pool:[['fly',3],['pigeon',3],['mouse',2]]},
      {t:46,rate:.44,pool:[['pigeon',3],['mosq',3],['fly',2]]},{t:66,rate:.34,pool:[['pigeon',3],['mosq',3],['dande',2],['fly',2]]}],
    surges:[36,64]},
-  {n:'놀이터 모래밭',icon:'🏖️',shape:{k:'circ',R:780},bg:2,boss:'toad',elite:'frog',mid:'sand',bossAt:84,
-   d:'모래밭이 끈적끈적해졌다…!',vil:'toad',vline:'두껍! 내 헌 집 내놔라 개굴!',cline:'모래밭은 모두의 것이다냥!',
-   waves:[{t:0,rate:.8,pool:[['slime',4],['frog',2]]},{t:24,rate:.56,pool:[['frog',3],['slime',3],['wasp',2]]},
-     {t:48,rate:.42,pool:[['frog',3],['wasp',3],['mosq',2]]},{t:68,rate:.33,pool:[['frog',3],['wasp',3],['snake',1.5],['slime',2]]}],
+  {n:'놀이터 모래밭',icon:'🏖️',shape:{k:'circ',R:780},bg:2,boss:'toad',elite:'pebble',mid:'mole',bossAt:84,
+   d:'모래밭이 끈적끈적해졌다…!',vil:'toad',vline:'두껍아 두껍아~ 새 집 내놔라 개굴!',cline:'모래밭은 모두의 것이다냥!',
+   waves:[{t:0,rate:.8,pool:[['ant',4],['pebble',2]]},{t:24,rate:.56,pool:[['ant',4],['pebble',3],['wasp',2]]},
+     {t:48,rate:.42,pool:[['ant',4],['pebble',3],['mosq',2]]},{t:68,rate:.33,pool:[['ant',4],['pebble',3],['wasp',2],['mosq',2]]}],
    surges:[38,66]},
   {n:'시장 골목',icon:'🧺',shape:{k:'rect',w:2200,h:760},bg:3,boss:'duo',elite:'wasp',mid:'firefly',bossAt:86,
    d:'좁고 긴 골목. 도망칠 곳이 없다!',vil:'flyB',vline:'위이잉~ 시장 보호비 내놔라!',cline:'양아치들은 퇴치한다냥!',
@@ -433,6 +435,8 @@ const MOB={
   hedge:{stk:'hedge',r:15,hp:17,sp:76,xp:2,dmg:12,beh:'rush'},
   snake:{stk:'snake',r:18,hp:28,sp:60,xp:3,dmg:12,beh:'eat',coin:2},
   dande:{stk:'dande',r:17,hp:18,sp:0,xp:2,dmg:9,beh:'turret'},
+  ant:{stk:'ant',r:13,hp:8,sp:104,xp:1,dmg:7,beh:'dart'},        // 놀이터 개미
+  pebble:{stk:'pebble',r:16,hp:24,sp:46,xp:2,dmg:11,beh:'chase'},// 놀이터 돌멩이
   boar:{stk:'boar',r:36,hp:340,sp:60,xp:10,dmg:16,beh:'boar',boss:'돌격대장 멧돼지'},
   topgun:{stk:'topgun',r:32,hp:430,sp:0,xp:10,dmg:14,beh:'topgun',boss:'탑건 비둘기'},
   frogq:{stk:'frogq',r:40,hp:520,sp:0,xp:12,dmg:16,beh:'frogq',boss:'슬라임퀸 개구리'},
@@ -443,11 +447,11 @@ const MOB={
   dogB:{stk:'dogB',r:40,hp:840,sp:64,xp:16,dmg:16,beh:'dogB',boss:'들개대장 불독'},
   mage:{stk:'mage',r:38,hp:1080,sp:40,xp:20,dmg:15,beh:'mage',boss:'대마법사 생쥐'},
   // reassigned boss: 모래밭 = 두꺼비(독안개)
-  toad:{stk:'toad',r:40,hp:540,sp:0,xp:13,dmg:16,beh:'toad',boss:'헌집 싫은 두꺼비'},
+  toad:{stk:'toad',r:40,hp:540,sp:0,xp:13,dmg:16,beh:'toad',boss:'새집 탐내는 두꺼비'},
   // ===== midbosses (mid:true — strong but don't end the stage) =====
   weasel:{stk:'weasel',r:30,hp:170,sp:118,xp:6,dmg:13,beh:'weasel',boss:'앞잡이 족제비',mid:1},
   sparrow:{stk:'sparrow',r:18,hp:75,sp:0,xp:3,dmg:11,beh:'sparrow',boss:'참새 3인방',mid:1},
-  sand:{stk:'sand',r:36,hp:200,sp:52,xp:6,dmg:12,beh:'sandstorm',boss:'모래먼지',mid:1},
+  mole:{stk:'mole',r:34,hp:210,sp:60,xp:6,dmg:13,beh:'mole',boss:'두더지 두목',mid:1},
   firefly:{stk:'firefly',r:30,hp:210,sp:46,xp:6,dmg:13,beh:'dung',boss:'친구없는 개똥벌레',mid:1},
   waspU:{stk:'wasp',r:30,hp:230,sp:78,xp:6,dmg:13,beh:'flyB',boss:'말벌집 말벌아저씨',mid:1},
   bigslime:{stk:'slime',r:34,hp:240,sp:50,xp:6,dmg:12,beh:'split',boss:'끈적 대슬라임',mid:1},
@@ -460,7 +464,9 @@ let gTime=0,kills=0,combo=0,comboT=0,maxCombo=0,lastMile=0,runCoins=0;
 let player=null,enemies=[],bullets=[],ebullets=[],gems=[],coinDrops=[],drops=[],parts=[],floaters=[],fxs=[],banners=[],zones=[],turrets=[],obstacles=[];
 let cam={x:0,y:0},shake=0,freezeT=0,slowT=0,flashR=0,flashW=0;
 let spawnT=0,pendingLv=0,levelDelay=0,fishAng=0,walkT=0,tutT=4;
-let bossOn=false,bossDone=false,eliteDone=false,midDone=false,frzT=0,skillCd=0,cdT=0,lastCdN=0,echoQ=[];
+let bossOn=false,bossDone=false,eliteDone=false,midDone=false,midOn=false,frzT=0,skillCd=0,cdT=0,lastCdN=0,echoQ=[];
+const MID_AT=120,BOSS_AT=240; // fixed: midboss at 2:00, final boss at 4:00
+let midLoot=0; // pending count of luck-boosted level-ups (midboss reward)
 let surged=[],hitStop=0,masterMode=false;
 let joy={on:false,id:-1,ax:0,ay:0,dx:0,dy:0};
 const keys={};
@@ -472,13 +478,13 @@ function resetRun(){
     magnet:95*(1+SV.up.mag*.18),dmgMul:1,dmgBase:1+SV.up.dmg*.05,cdMul:1,cdAcc:1,
     level:1,xp:0,xpNext:5,iT:0,face:1,fx:1,fy:0,shieldT:0,innT:0,
     weapons:{},pass:{spd:0,mag:0,dmg:0},passN:{},skill:null,stk:c.stk,innate:c.innate,
-    dodge:0,block:0,reflect:0,revive:0,buffs:{}};
+    dodge:0,block:0,reflect:0,revive:0,luck:0,buffs:{}};
   c.mod(player);newWeapon(c.innate);recompute();
   enemies=[];bullets=[];ebullets=[];gems=[];coinDrops=[];drops=[];parts=[];floaters=[];fxs=[];banners=[];zones=[];turrets=[];
   gTime=0;kills=0;combo=0;comboT=0;maxCombo=0;lastMile=0;runCoins=0;
   cam={x:0,y:0};shake=0;freezeT=0;slowT=0;flashR=0;flashW=0;spawnT=.5;
   pendingLv=0;levelDelay=0;walkT=0;tutT=4;gemStreak=0;
-  bossOn=false;bossDone=false;eliteDone=false;midDone=false;frzT=0;skillCd=0;echoQ=[];
+  bossOn=false;bossDone=false;eliteDone=false;midDone=false;midOn=false;midLoot=0;frzT=0;skillCd=0;echoQ=[];
   surged=[];hitStop=0;clones=[];holeT=0;window.__e2=false;genObstacles();}
 function recompute(){
   player.speed=player.baseSpeed*(1+player.pass.spd);
@@ -565,17 +571,23 @@ function spawnEnemy(type,ax,ay){
     if(e.boss){e.hp*=1.5;e.dmg=Math.round(e.dmg*1.2);}
     else{e.hp*=1.7;e.dmg+=4;e.xp+=1;
       const m=Math.random();
-      if(m<.3){e.sp*=1.5;e.mut='fast';}
+      if(m<.3){e.sp*=1.3;e.mut='fast';}
       else if(m<.55){e.hp*=1.4;e.noKb=1;e.mut='tank';}
       else if(m<.78){e.dmg=Math.round(e.dmg*1.5);e.mut='fierce';}}}
+  // never let a steadily-chasing mob outrun the player (must be escapable).
+  // dash/charge attacks use their own literal speeds, so they're unaffected.
+  if(player&&!e.boss)e.sp=Math.min(e.sp,player.speed*.9);
   e.maxhp=e.hp;clampArena(e,e.r);enemies.push(e);return e;}
 function spawnElite(type){
   const e=spawnEnemy(type);if(!e)return;
   e.elite=true;e.hp*=12;e.maxhp=e.hp;e.scale=1.9;e.dmg+=5;e.xp=24;e.sp*=.88;e.coin+=4;
   sWarn();banner('👑 정예 몬스터 출현!','#ffd23e',1.6);return e;}
 function spawnMid(){
-  midDone=true;sWarn();flashW=.5;shake=8;
-  const key=ST.mid;if(!key)return;
+  midDone=true;midOn=true;sWarn();flashW=.5;shake=8;
+  const key=ST.mid;if(!key){midOn=false;return;}
+  // clear jobmobs — midboss is a solo fight
+  for(const o of enemies.slice())if(!o.boss){dropGem(o.x,o.y,o.xp);puff(o.x,o.y,3);
+    enemies.splice(enemies.indexOf(o),1);}
   banner('⚔ 중간보스! '+MOB[key].boss,'#ff8c2f',2);
   if(key==='sparrow'){ // 참새 3인방 — 3 sparrows, each a different skill
     const skills=['dive','peck','poop'];
@@ -606,24 +618,26 @@ function doSurge(){
       spawnEnemy(pick,player.x+Math.cos(a)*R,player.y+Math.sin(a)*R);}},950);}
 function director(dt){
   if(bossDone||bossOn)return;
-  if(gTime>=ST.bossAt){spawnBoss();return;}
-  // midboss at ~halfway
-  if(!midDone&&ST.mid&&gTime>=ST.bossAt*.5)spawnMid();
-  // elites
-  if(!eliteDone&&gTime>=ST.bossAt*.3){eliteDone=true;spawnElite(ST.elite);}
-  if(ST.elite2&&!window.__e2&&gTime>=ST.bossAt*.74){window.__e2=true;spawnElite(ST.elite2);}
-  // surges
-  for(const st of ST.surges)if(gTime>=st&&!surged.includes(st)){surged.push(st);doSurge();}
-  // steady stream by current wave
+  if(gTime>=BOSS_AT){spawnBoss();return;}              // 4:00 boss
+  if(!midDone&&ST.mid&&gTime>=MID_AT){spawnMid();return;} // 2:00 midboss
+  if(midOn)return;                                      // solo midboss fight — no jobmobs
+  // elites (before & after the midboss)
+  if(!eliteDone&&gTime>=55){eliteDone=true;spawnElite(ST.elite);}
+  if(!window.__e2&&gTime>=170){window.__e2=true;spawnElite(ST.elite2||ST.elite);}
+  // surges — stage's own + fixed late-stage pressure
+  for(const st of [40,80,160,205])if(gTime>=st&&!surged.includes(st)){surged.push(st);doSurge();}
+  // steady stream by current wave (ramps up over the 4-min stage)
   spawnT-=dt;
   if(spawnT<=0){const w=curWave();
-    spawnT=Math.max(.15,w.rate*(0.78+0.22*Math.sin(gTime)));
+    const ramp=gTime>150?.62:gTime>90?.78:1;
+    spawnT=Math.max(.12,w.rate*ramp*(0.78+0.22*Math.sin(gTime)));
     let tot=0;for(const[,wt]of w.pool)tot+=wt;
     let r=Math.random()*tot,pick=w.pool[0][0];
     for(const[k,wt]of w.pool){r-=wt;if(r<=0){pick=k;break;}}
     spawnEnemy(pick);
-    // double-spawn pressure late in stage
-    if(gTime>ST.bossAt*.6&&Math.random()<.45)spawnEnemy(pick);}}
+    // double / triple-spawn pressure late in the stage
+    if(gTime>140&&Math.random()<.55)spawnEnemy(pick);
+    if(gTime>200&&Math.random()<.4)spawnEnemy(pick);}}
 // ================= combat =================
 function damageEnemy(e,dmg,hx,hy){
   let mul=1;
@@ -661,10 +675,11 @@ function killEnemy(e){
   else if(!e.boss){const pity=player.hp<player.maxhp*.35?2.2:1;
     if(Math.random()<.02*pity)dropItem(e.x,e.y,'chicken');
     else if(Math.random()<.006)dropItem(e.x,e.y,SKILL_KEYS[(Math.random()*SKILL_KEYS.length)|0]);}
-  if(e.boss&&e.mid){ // midboss(es) down → big card reward when the last one falls
-    if(!enemies.some(x=>x.mid)){openChest();
+  if(e.boss&&e.mid){ // midboss(es) down → resume jobmobs + a high-tier level-up
+    if(!enemies.some(x=>x.mid)){midOn=false;
+      midLoot+=1;pendingLv++;
       dropItem(e.x,e.y,SKILL_KEYS[(Math.random()*SKILL_KEYS.length)|0]);
-      banner('⚔ 중간보스 격파!','#ffd23e',1.6);}}
+      banner('⚔ 중간보스 격파! 좋은 카드 등장!','#ffd23e',1.8);sLevel();}}
   if(e.boss&&!e.mid){
     for(const o of enemies)if(o.boss&&!o.mid)o.st.rage=true;
     if(!enemies.some(x=>x.boss&&!x.mid))stageCleared();}
@@ -773,6 +788,10 @@ const DEFS={
     d:p=>'투사체 차단 +12% (현재 '+Math.round((p.block||0)*100)+'%)',fx:p=>p.block=Math.min(.55,(p.block||0)+.12)},
   reflect:{name:'가시 갑옷',icon:'dmg',max:3,col:'#ff7a4f',
     d:p=>'피격 시 주변에 가시 반격 (Lv.'+((p.reflect||0)+1)+')',fx:p=>p.reflect=(p.reflect||0)+1},
+  luck:{name:'네잎클로버',icon:'luck',max:5,col:'#5aa843',
+    d:p=>'카드 등급 운 UP! (Lv.'+((p.luck||0)+1)+')',fx:p=>p.luck=(p.luck||0)+1},
+  haste:{name:'바람 방울',icon:'spd',max:4,col:'#7ec8ff',
+    d:p=>'이동속도 +8%',fx:p=>{p.baseSpeed*=1.08;recompute();}},
   revive:{name:'아홉번째 목숨',icon:'hp',max:1,col:'#ffd23e',sss:1,
     d:p=>'쓰러져도 1번 부활 + 폭발! (전설)',fx:p=>p.revive=(p.revive||0)+1},
 };
@@ -936,7 +955,7 @@ function updateEnemy(e,dt){
   const S=e.st;
   // ===== boss PHASE 2: rage at 50% HP — bigger, redder, faster, extra attacks =====
   if(e.boss&&!S.rage&&e.hp<e.maxhp*.5){S.rage=true;e.rage=1;
-    e.scale*=1.16;e.sp*=1.28;e.dmg=Math.round(e.dmg*1.25);
+    e.scale*=1.16;e.sp*=1.16;e.dmg=Math.round(e.dmg*1.25);
     banner('💢 '+e.boss+' 분노!!','#ff3860',1.7);sWarn();sBig();
     shake=Math.max(shake,10);flashR=.5;slowT=.35;
     fxs.push({kind:'nova',x:e.x,y:e.y,r:18,max:200,t:0,col:'#ff3860'});
@@ -1242,12 +1261,21 @@ function updateEnemy(e,dt){
           for(let i=0;i<3;i++)efire(e.x,e.y,Math.cos(b+(i-1)*.3)*230,Math.sin(b+(i-1)*.3)*230,'feather',7,3.5,e.dmg);}
         else{addZone(player.x,player.y,72,1,0,e.dmg);}}
       break;}
-    case 'sandstorm':
-      e.x+=(dx/d*e.sp+Math.cos(e.wob*2)*34)*dt;e.y+=(dy/d*e.sp+Math.sin(e.wob*2)*34)*dt;
-      S.t=(S.t===undefined?2:S.t)-dt;
-      if(S.t<=0){S.t=3;sWarn();
-        for(let i=0;i<3;i++)addZone(player.x+rnd(-150,150),player.y+rnd(-150,150),86,.9,2.5,11);
-        for(let i=0;i<8;i++){const a=i/8*TAU;efire(e.x,e.y,Math.cos(a)*130,Math.sin(a)*130,'sandp',7,3,e.dmg);}}
+    case 'mole': // 두더지 두목 — surfaces to throw dirt, then burrows & pops up near you
+      if(!S.ph){S.ph='up';S.t=2.4;}
+      if(S.ph==='up'){S.t-=dt;e.invis=0;
+        e.x+=Math.cos(e.wob)*22*dt;e.y+=Math.sin(e.wob)*22*dt;
+        S.fire=(S.fire===undefined?.7:S.fire)-dt;
+        if(S.fire<=0){S.fire=e.rage?.7:1.1;sShot();const a=Math.atan2(dy,dx);
+          for(let i=-1;i<=1;i++)efire(e.x,e.y-10,Math.cos(a+i*.22)*210,Math.sin(a+i*.22)*210,'dirt',9,4,e.dmg);}
+        if(S.t<=0){S.ph='dig';S.t=1.5;e.invis=1;sThud();puff(e.x,e.y,8);
+          for(let i=0;i<2;i++)spawnEnemy('ant',e.x+rnd(-20,20),e.y+rnd(-20,20));}}
+      else{S.t-=dt;e.invis=1;
+        e.x+=dx/d*e.sp*1.35*dt;e.y+=dy/d*e.sp*1.35*dt;
+        if(Math.random()<dt*6&&parts.length<PCAP)parts.push({x:e.x,y:e.y,vx:0,vy:0,life:.5,col:'#8a6a4a',sz:6,puff:1});
+        if(S.t<=0){e.invis=0;S.ph='up';S.t=e.rage?1.7:2.6;puff(e.x,e.y,10);sThud();shake=Math.max(shake,4);
+          fxs.push({kind:'nova',x:e.x,y:e.y,r:10,max:90,t:0,col:'#a07a4a'});
+          if(player.iT<=0&&dist2(e.x,e.y,player.x,player.y)<90*90)hurtPlayer(e.dmg);}}
       break;
     case 'dung':
       e.x+=dx/d*e.sp*dt;e.y+=dy/d*e.sp*dt;
@@ -1307,7 +1335,7 @@ function updateEnemy(e,dt){
   clampArena(e,e.r*e.scale*.7);
   if(obstacles.length&&!e.boss&&!e.air)resolveObstacles(e,e.r*e.scale*.55);
   const dd=Math.hypot(player.x-e.x,player.y-e.y);
-  if(player.iT<=0&&!e.air&&dd<e.r*e.scale+player.r)hurtPlayer(e.dmg+(e.meals||0)*2);}
+  if(player.iT<=0&&!e.air&&!e.invis&&dd<e.r*e.scale+player.r)hurtPlayer(e.dmg+(e.meals||0)*2);}
 // ================= flow =================
 function stageCleared(){
   bossDone=true;state='clear';sClear();slowT=.9;
@@ -1559,12 +1587,21 @@ function drawStk(s,x,y,rot,scale,flip){
   ctx.drawImage(s.n,-s.half,-s.half);ctx.restore();}
 function drawObstacle(ob){
   const x=ob.x,y=ob.y,r=ob.r;
-  if(ob.slow){ // sand pit / puddle — translucent blob, no outline
-    ctx.globalAlpha=.5;ctx.fillStyle=ob.type==='puddle'?'#5a8a9a':'#e0c081';
-    ctx.beginPath();ctx.ellipse(x,y,r,r*.8,ob.rot,0,TAU);ctx.fill();
-    ctx.globalAlpha=.3;ctx.fillStyle=ob.type==='puddle'?'#7fb0c0':'#f0d8a8';
-    ctx.beginPath();ctx.ellipse(x,y,r*.7,r*.5,ob.rot,0,TAU);ctx.fill();
-    ctx.globalAlpha=1;return;}
+  if(ob.slow){ // sand pit / puddle — clearly readable "slow here" patch
+    const pud=ob.type==='puddle';
+    ctx.fillStyle=pud?'#3f6f80':'#caa45e';
+    ctx.beginPath();ctx.ellipse(x,y,r,r*.82,ob.rot,0,TAU);ctx.fill();
+    ctx.fillStyle=pud?'#5a8fa0':'#e0bd72';
+    ctx.beginPath();ctx.ellipse(x,y,r*.74,r*.56,ob.rot,0,TAU);ctx.fill();
+    // dashed rim so the boundary is obvious
+    ctx.save();ctx.setLineDash([10,7]);ctx.lineWidth=4;ctx.strokeStyle=pud?'#2c5460':'#9a7838';
+    ctx.beginPath();ctx.ellipse(x,y,r,r*.82,ob.rot,0,TAU);ctx.stroke();ctx.restore();
+    // ripples / footprints texture
+    ctx.globalAlpha=.5;ctx.strokeStyle=pud?'#7fb0c0':'#b89456';ctx.lineWidth=2.5;
+    for(let i=1;i<=2;i++){ctx.beginPath();ctx.ellipse(x,y,r*(.3*i),r*.24*i,ob.rot,0,TAU);ctx.stroke();}
+    ctx.globalAlpha=.85;ctx.font='bold '+Math.round(r*.42)+'px Jua,sans-serif';
+    ctx.fillStyle=pud?'#dff':'#6a4a1a';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(pud?'💧':'🐢',x,y);ctx.textBaseline='alphabetic';ctx.globalAlpha=1;return;}
   // shadow
   ctx.globalAlpha=.2;ctx.fillStyle='#1c3206';
   ctx.beginPath();ctx.ellipse(x,y+r*.5,r*.95,r*.34,0,0,TAU);ctx.fill();ctx.globalAlpha=1;
@@ -1638,6 +1675,9 @@ function drawEb(b){ // hostile bullet: red halo + core
   else if(b.spr==='sandp'){ctx.fillStyle='#d6b478';
     ctx.beginPath();ctx.arc(0,0,b.r,0,TAU);ctx.fill();
     ctx.fillStyle='#b8945a';ctx.beginPath();ctx.arc(-b.r*.3,-b.r*.3,b.r*.4,0,TAU);ctx.fill();}
+  else if(b.spr==='dirt'){ctx.fillStyle='#7a5a3a';
+    ctx.beginPath();for(let i=0;i<6;i++){const a=i/6*TAU,rr=i%2?b.r*.6:b.r;ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);}ctx.closePath();ctx.fill();
+    ctx.fillStyle='#9a7a52';ctx.beginPath();ctx.arc(-b.r*.25,-b.r*.25,b.r*.35,0,TAU);ctx.fill();}
   else{ctx.fillStyle='#c0392b';ctx.beginPath();ctx.arc(0,0,b.r,0,TAU);ctx.fill();}
   ctx.restore();}
 function draw(){
@@ -1930,12 +1970,15 @@ function drawHUD(){
   ctx.fillStyle='#fff';ctx.fillText(htxt,pad+hbw/2,top+27);
   // stage + timer/boss
   ctx.font='900 12px Jua,sans-serif';
-  ctx.strokeText(stage+'. '+ST.n,W/2,top+6);
-  ctx.fillStyle='#fff';ctx.fillText(stage+'. '+ST.n,W/2,top+6);
-  if(!bossOn){const left=Math.max(0,ST.bossAt-gTime);
+  const label=(masterMode?'🔥달인 ':'')+stage+'. '+ST.n;
+  ctx.strokeText(label,W/2,top+6);
+  ctx.fillStyle=masterMode?'#ff9a4c':'#fff';
+  ctx.fillText(label,W/2,top+6);
+  if(!bossOn&&!midOn){
+    const toMid=!midDone&&gTime<MID_AT, left=Math.max(0,(toMid?MID_AT:BOSS_AT)-gTime);
     ctx.font='900 22px Jua,sans-serif';
-    const tstr='👹 '+fmtT(left);
-    ctx.strokeText(tstr,W/2,top+30);ctx.fillStyle='#fff';ctx.fillText(tstr,W/2,top+30);}
+    const tstr=(toMid?'⚔ ':'👹 ')+fmtT(left);
+    ctx.strokeText(tstr,W/2,top+30);ctx.fillStyle=toMid?'#ffb02f':'#fff';ctx.fillText(tstr,W/2,top+30);}
   ctx.textAlign='right';ctx.font='900 14px Jua,sans-serif';
   ctx.strokeText('💀 '+kills,W-pad,top+10);ctx.fillStyle='#fff';ctx.fillText('💀 '+kills,W-pad,top+10);
   ctx.strokeText('🪙 '+runCoins,W-pad,top+28);ctx.fillStyle='#ffe066';ctx.fillText('🪙 '+runCoins,W-pad,top+28);
@@ -2021,8 +2064,8 @@ function drawMenuScene(t){
 // ================= level up cards =================
 function show(id){$(id).classList.remove('hidden');}
 function hide(id){$(id).classList.add('hidden');}
-function genCard(){
-  const tier=rollTier();
+function genCard(boost){
+  const tier=rollTier(boost);
   const owned=Object.keys(player.weapons);
   const nonInn=owned.filter(k=>!WDEF[k].innate);
   const opts=[];
@@ -2093,10 +2136,14 @@ function applyCard(p){
 function showLevelup(){
   state='levelup';
   const wrap=$('luCards');wrap.innerHTML='';
+  const lucky=midLoot>0;if(lucky)midLoot--;          // midboss reward: boosted tiers
+  const lt=document.querySelector('#levelup .lutitle');
+  if(lt)lt.textContent=lucky?'⚔ 중간보스 전리품!':'🐾 LEVEL UP!';
+  const boost=lucky?.4:0;
   const picks=[],used=new Set();
   const idOf=p=>p.kind+p.key+(p.v?p.v.n:'')+(p.ev?p.ev.id:'');
   for(let i=0;i<3;i++){let p=null;
-    for(let tr=0;tr<10;tr++){p=genCard();
+    for(let tr=0;tr<10;tr++){p=genCard(boost);
       if(p&&!used.has(idOf(p))){used.add(idOf(p));break;}}
     if(p)picks.push(p);}
   if(!picks.length){state='playing';return;}
