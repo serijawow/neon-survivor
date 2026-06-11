@@ -388,6 +388,9 @@ const ICONS={
     g.beginPath();g.arc(0,-r*.1,r*.6,Math.PI,0);g.lineTo(r*.6,r*.5);
     for(let i=0;i<3;i++)g.quadraticCurveTo(r*.6-i*r*.4-r*.2,r*.7,r*.6-i*r*.4-r*.4,r*.5);
     g.closePath();g.fill();g.stroke();dotEye(g,-r*.2,-r*.1,r*.12);dotEye(g,r*.2,-r*.1,r*.12);}),
+  fur:iconCanvas((g,r)=>{g.fillStyle='#b07a44';g.strokeStyle='#7a5028';g.lineWidth=r*.1;
+    g.beginPath();for(let i=0;i<11;i++){const a=i/11*TAU,rr=i%2?r*.6:r*.92;g.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);}g.closePath();g.fill();g.stroke();
+    g.fillStyle='#d8a868';for(const p of[[-.3,-.2],[.25,.1],[0,.3]]){g.beginPath();g.arc(p[0]*r,p[1]*r,r*.18,0,TAU);g.fill();}}),
   luck:iconCanvas((g,r)=>{g.fillStyle='#4faa3e';g.strokeStyle='#2c6b22';g.lineWidth=r*.08;
     for(let i=0;i<4;i++){g.save();g.rotate(i/4*TAU);
       g.beginPath();g.moveTo(0,-r*.12);g.bezierCurveTo(r*.5,-r*.7,r*.5,-r*.1,0,-r*.12);

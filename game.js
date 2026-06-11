@@ -446,9 +446,9 @@ const STAGES=[
    surges:[36,64]},
   {n:'놀이터 모래밭',icon:'🏖️',shape:{k:'circ',R:780},bg:2,boss:'toad',elite:'pebble',mid:'mole',bossAt:84,
    d:'모래밭이 끈적끈적해졌다…!',vil:'toad',vline:'두껍아 두껍아~ 새 집 내놔라 개굴!',cline:'모래밭은 모두의 것이다냥!',
-   waves:[{t:0,rate:.78,pool:[['ant',5]]},{t:24,rate:.54,pool:[['ant',5],['acorn',3]]},
-     {t:48,rate:.4,pool:[['ant',4],['pebble',2],['acorn',3]]},
-     {t:68,rate:.32,pool:[['ant',4],['pebble',2],['acorn',3],['wasp',1.3]]}],
+   waves:[{t:0,rate:.78,pool:[['ant',4],['pebble',3]]},{t:24,rate:.54,pool:[['ant',4],['pebble',3],['acorn',1.5]]},
+     {t:48,rate:.4,pool:[['ant',4],['pebble',3],['acorn',1.5],['wasp',1.2]]},
+     {t:68,rate:.32,pool:[['ant',4],['pebble',3],['acorn',1.5],['wasp',1.2]]}],
    surges:[38,66]},
   {n:'시장 골목',icon:'🧺',shape:{k:'rect',w:2200,h:760},bg:3,boss:'duo',elite:'wasp',mid:'firefly',bossAt:86,
    d:'좁고 긴 골목. 도망칠 곳이 없다!',vil:'flyB',vline:'위이잉~ 시장 보호비 내놔라!',cline:'양아치들은 퇴치한다냥!',
@@ -524,8 +524,7 @@ let player=null,enemies=[],bullets=[],ebullets=[],gems=[],coinDrops=[],drops=[],
 let cam={x:0,y:0},shake=0,freezeT=0,slowT=0,flashR=0,flashW=0;
 let spawnT=0,pendingLv=0,levelDelay=0,fishAng=0,ghostAng=0,walkT=0,tutT=4;
 let bossOn=false,bossDone=false,eliteDone=false,midDone=false,midOn=false,frzT=0,skillCd=0,cdT=0,lastCdN=0,echoQ=[];
-const MID_AT=90,BOSS_AT=180; // fixed: midboss at 1:30, final boss at 3:00
-const LV_MAX=15;
+const LV_MAX=15,MID_LV=7,BOSS_LV=15; // midboss at Lv.7, final boss at Lv.15 (max)
 let midLoot=0; // pending count of luck-boosted level-ups (midboss reward)
 let surged=[],hitStop=0,masterMode=false;
 let joy={on:false,id:-1,ax:0,ay:0,dx:0,dy:0};
@@ -681,24 +680,23 @@ function doSurge(){
       spawnEnemy(pick,player.x+Math.cos(a)*R,player.y+Math.sin(a)*R);}},950);}
 function director(dt){
   if(bossDone||bossOn)return;
-  if(gTime>=BOSS_AT){spawnBoss();return;}              // 4:00 boss
-  if(!midDone&&ST.mid&&gTime>=MID_AT){spawnMid();return;} // 2:00 midboss
-  if(midOn)return;                                      // solo midboss fight — no jobmobs
-  // elites (before & after the midboss)
-  if(!eliteDone&&gTime>=55){eliteDone=true;spawnElite(ST.elite);}
-  if(!window.__e2&&gTime>=170){window.__e2=true;spawnElite(ST.elite2||ST.elite);}
-  // surges — stage's own + fixed late-stage pressure
-  for(const st of [40,80,160,205])if(gTime>=st&&!surged.includes(st)){surged.push(st);doSurge();}
-  // steady stream by current wave (ramps up over the 4-min stage)
+  // ===== bosses gated by PLAYER LEVEL (clear time varies by build/skill → real ranking) =====
+  if(player.level>=BOSS_LV){spawnBoss();return;}           // boss at Lv.15
+  if(!midDone&&ST.mid&&player.level>=MID_LV){spawnMid();return;} // midboss at Lv.7
+  if(midOn)return;                                          // solo midboss fight — no jobmobs
+  if(!eliteDone&&player.level>=4){eliteDone=true;spawnElite(ST.elite);}
+  if(!window.__e2&&player.level>=11){window.__e2=true;spawnElite(ST.elite2||ST.elite);}
+  // surges — periodic pressure
+  for(const st of [35,75,125,175])if(gTime>=st&&!surged.includes(st)){surged.push(st);doSurge();}
+  // steady stream by current wave (composition ramps with survived time)
   spawnT-=dt;
   if(spawnT<=0){const w=curWave();
-    const ramp=gTime>150?.62:gTime>90?.78:1;
+    const ramp=player.level>=11?.62:player.level>=6?.78:1;
     spawnT=Math.max(.12,w.rate*ramp*(0.78+0.22*Math.sin(gTime)));
     const pick=pickMob(w.pool);
     spawnEnemy(pick);
-    // double / triple-spawn pressure late in the stage
-    if(gTime>140&&Math.random()<.55)spawnEnemy(pickMob(w.pool));
-    if(gTime>200&&Math.random()<.4)spawnEnemy(pickMob(w.pool));}}
+    if(player.level>=9&&Math.random()<.55)spawnEnemy(pickMob(w.pool));
+    if(player.level>=13&&Math.random()<.4)spawnEnemy(pickMob(w.pool));}}
 // special-pattern mobs (split/rush/jump/fuse/eat) stay rare — only a handful on screen.
 // common approach/ranged mobs make up the bulk. Re-rolls to a common type if a special is capped.
 const SPECIAL_BEH={split:1,rush:1,hop:1,fuse:1,eat:1};
@@ -862,8 +860,9 @@ function newWeapon(key){player.weapons[key]={dmg:1,rate:1,n:0,size:1,pierce:0,sp
 const DEFS={
   dodge:{name:'날렵한 몸놀림',icon:'spd',max:5,col:'#7ec8ff',
     d:p=>'회피율 +9% (현재 '+Math.round((p.dodge||0)*100)+'%)',fx:p=>p.dodge=Math.min(.55,(p.dodge||0)+.09)},
-  block:{name:'참치캔 방패',icon:'mag',max:4,col:'#5aa843',
-    d:p=>'투사체 차단 +12% (현재 '+Math.round((p.block||0)*100)+'%)',fx:p=>p.block=Math.min(.55,(p.block||0)+.12)},
+  block:{name:'털망토',icon:'fur',max:99,col:'#a06a3a',
+    d:(p,t)=>'투사체 차단 +'+({C:5,B:7,A:9,S:10,SS:10}[t]||6)+'% (현재 '+Math.round((p.block||0)*100)+'%, 최대 30%)',
+    fx:(p,t)=>p.block=Math.min(.30,(p.block||0)+({C:.05,B:.07,A:.09,S:.10,SS:.10}[t]||.06))},
   reflect:{name:'가시 갑옷',icon:'dmg',max:3,col:'#ff7a4f',
     d:p=>'피격 시 '+Math.round((.13+((p.reflect||0)+1)*.22)*100)+'% 확률로 가시 반격',fx:p=>p.reflect=(p.reflect||0)+1},
   luck:{name:'네잎클로버',icon:'luck',max:5,col:'#5aa843',
@@ -896,23 +895,25 @@ function updateWeapons(dt){
             bullets.push({kind:'paw',x:player.x,y:player.y,vx:Math.cos(a)*460,vy:Math.sin(a)*460,
               dmg:WD('paw',w)*.55,r:6*w.size,life:.95,pierce:w.sp.ring>=2?1:0,rot:a,spr:'paw',scale:w.size*.85,glow:w.lvl,gcol:'#ff8ab0'});}}
         sShot();}else w.t=.1;}}
-  // ---------- 흡혈 발톱 (melee) ----------
+  // ---------- 흡혈 발톱 (melee) — only swings when an enemy is actually in range ----------
   if(wp.claw){const w=wp.claw,cd=WDEF.claw.base.cd/w.rate*player.cdMul*cdScale;
-    w.t-=dt;if(w.t<=0){const tgt=nearTgt(160);
-      const baseA=tgt?Math.atan2(tgt.y-player.y,tgt.x-player.x):Math.atan2(player.fy,player.fx);
-      const angs=w.sp.spin?[0,1,2,3,4,5].map(i=>baseA+i/6*TAU):(w.sp.both?[baseA,baseA+Math.PI]:[baseA]);
-      const R=92*w.size,arc=w.sp.spin?TAU:1.25;let hit=0;
-      for(const a of angs)for(const e of enemies){
-        if(dist2(player.x,player.y,e.x,e.y)>R*R)continue;
-        let da=Math.abs(Math.atan2(e.y-player.y,e.x-player.x)-a);da=Math.min(da,TAU-da);
-        if(da<arc/2&&!e._clawT){const dm=WD('claw',w);damageEnemy(e,dm,player.x,player.y);
-          e._clawT=1;hit++;player.hp=Math.min(player.maxhp,player.hp+dm*.07*(w.sp.life||1));}}
-      for(const e of enemies)e._clawT=0;
-      for(const a of angs)fxs.push({kind:'claw',x:player.x,y:player.y,ang:a,t:0,r:R,full:w.sp.spin});
-      if(w.sp.thousand)for(let i=0;i<8;i++){const a=i/8*TAU;
-        bullets.push({kind:'blade',x:player.x,y:player.y,vx:Math.cos(a)*460,vy:Math.sin(a)*460,
-          dmg:WD('claw',w)*.6,r:9,life:.8,pierce:2,rot:a,spr:'blade',glow:1,gcol:'#ff5a6a'});}
-      if(hit||tgt){w.t=cd;noise(.05,.07,3000);}else w.t=.08;}}
+    w.t-=dt;if(w.t<=0){const tgt=nearTgt(150);
+      if(!tgt){w.t=.12;}  // idle — DON'T swing/flash when there's nothing to hit (was the "공격 엄청 많이" bug)
+      else{
+        const baseA=Math.atan2(tgt.y-player.y,tgt.x-player.x);
+        const angs=w.sp.spin?[0,1,2,3,4,5].map(i=>baseA+i/6*TAU):(w.sp.both?[baseA,baseA+Math.PI]:[baseA]);
+        const R=92*w.size,arc=w.sp.spin?TAU:1.25;
+        for(const a of angs)for(const e of enemies){
+          if(dist2(player.x,player.y,e.x,e.y)>R*R)continue;
+          let da=Math.abs(Math.atan2(e.y-player.y,e.x-player.x)-a);da=Math.min(da,TAU-da);
+          if(da<arc/2&&!e._clawT){const dm=WD('claw',w);damageEnemy(e,dm,player.x,player.y);
+            e._clawT=1;player.hp=Math.min(player.maxhp,player.hp+dm*.07*(w.sp.life||1));}}
+        for(const e of enemies)e._clawT=0;
+        for(const a of angs)fxs.push({kind:'claw',x:player.x,y:player.y,ang:a,t:0,r:R,full:w.sp.spin});
+        if(w.sp.thousand)for(let i=0;i<8;i++){const a=i/8*TAU;
+          bullets.push({kind:'blade',x:player.x,y:player.y,vx:Math.cos(a)*460,vy:Math.sin(a)*460,
+            dmg:WD('claw',w)*.6,r:9,life:.8,pierce:2,rot:a,spr:'blade',glow:1,gcol:'#ff5a6a'});}
+        w.t=cd;noise(.05,.07,3000);}}}
   // ---------- 장미 저격 ----------
   if(wp.rose){const w=wp.rose,cd=WDEF.rose.base.cd/w.rate*player.cdMul*cdScale;
     w.t-=dt;if(w.t<=0){const tgt=nearTgt(900);
@@ -993,34 +994,40 @@ function updateWeapons(dt){
     else{w.t-=dt;if(w.t<=0){w.t=cd;fireNova(w,1);
       if(w.sp.dbl)echoQ.push({x:player.x,y:player.y,t:.25,w,mul:1});
       if(w.sp.echo){echoQ.push({x:player.x,y:player.y,t:.55,w,mul:1.2});echoQ.push({x:player.x,y:player.y,t:1.05,w,mul:1.5});}}}}
-  // ---------- 레이저 포인터 ----------
+  // ---------- 레이저 포인터: 삐비빅 조준 → 피융! 즉발 빔 ----------
   if(wp.laser){const w=wp.laser,cd=WDEF.laser.base.cd/w.rate*player.cdMul*cdScale;
-    w.t-=dt;if(w.t<=0){const tgt=nearTgt(880);
-      if(tgt){w.t=cd;const base=Math.atan2(tgt.y-player.y,tgt.x-player.x);
-        if(w.sp.death){const len=900;
-          fxs.push({kind:'laserbeam',x:player.x,y:player.y,ang:base,len,t:0});
-          const x2=player.x+Math.cos(base)*len,y2=player.y+Math.sin(base)*len;
-          for(const e of enemies.slice())if(distSeg(e.x,e.y,player.x,player.y,x2,y2)<26*w.size+e.r*e.scale)
-            damageEnemy(e,WD('laser',w)*1.5,player.x,player.y);
-          shake=Math.max(shake,4);sZap();}
-        else{const n=1+w.n;
-          for(let i=0;i<n;i++){const a=base+(n>1?(i-(n-1)/2)*.11:0);
-            bullets.push({kind:'laser',x:player.x,y:player.y,vx:Math.cos(a)*1100,vy:Math.sin(a)*1100,
-              dmg:WD('laser',w),r:5*w.size,life:.72,pierce:2+w.pierce,rot:a,spr:'laser',glow:w.lvl,gcol:'#ff4f6a'});}
-          if(w.sp.scatter)for(let i=0;i<6;i++){const a=base+rnd(-.7,.7);
-            bullets.push({kind:'laser',x:player.x,y:player.y,vx:Math.cos(a)*880,vy:Math.sin(a)*880,
-              dmg:WD('laser',w)*.6,r:4*w.size,life:.6,pierce:1+w.pierce,rot:a,spr:'laser',glow:w.lvl,gcol:'#ff8a4f'});}
-          sShot();}}else w.t=.1;}}
-  // ---------- 유령냥 친구 (orbiting familiars that auto-fire) ----------
-  if(wp.ghost){const w=wp.ghost;ghostAng+=dt*1.5;
-    const n=w.sp.king?1:1+w.n,R=64+6*w.n;
-    w.t-=dt;if(w.t<=0){const tgt=nearTgt(720);
+    if(w.aim>0){ // aiming — track the locked target, then fire
+      if(w.aimTgt&&w.aimTgt.hp>0&&enemies.includes(w.aimTgt))
+        w.ang=Math.atan2(w.aimTgt.y-player.y,w.aimTgt.x-player.x);
+      w.aim-=dt;
+      if(w.aim<=0){const base=w.ang,len=880,beams=[];
+        if(w.sp.scatter)for(let i=0;i<3+w.n;i++)beams.push(base+(i-(2+w.n)/2)*.2);
+        else if(w.sp.death)beams.push(base);
+        else for(let i=0;i<1+w.n;i++)beams.push(base+(w.n>0?(i-w.n/2)*.09:0));
+        for(const a of beams){const wid=(w.sp.death?30:11)*w.size;
+          fxs.push({kind:'laserbeam',x:player.x,y:player.y,ang:a,len,wid,t:0});
+          const x2=player.x+Math.cos(a)*len,y2=player.y+Math.sin(a)*len;
+          for(const e of enemies.slice())if(distSeg(e.x,e.y,player.x,player.y,x2,y2)<wid/2+e.r*e.scale)
+            damageEnemy(e,WD('laser',w)*(w.sp.death?1.6:1)*(w.sp.scatter?.7:1),player.x,player.y);}
+        sZap();shake=Math.max(shake,w.sp.death?5:2);w.t=cd;w.aim=0;}}
+    else{w.t-=dt;if(w.t<=0){const tgt=nearTgt(900);
+      if(tgt){w.aim=.26;w.aimTgt=tgt;w.ang=Math.atan2(tgt.y-player.y,tgt.x-player.x);
+        tone(1300,.04,'square',.05);setTimeout(()=>{tone(1700,.05,'square',.05);},70);} // 삐비빅
+      else w.t=.1;}}}
+  // ---------- 유령냥 친구: 느슨히 떠다니며 적을 쫓는 유도 영혼탄 (생선=근접가드와 차별) ----------
+  if(wp.ghost){const w=wp.ghost;ghostAng+=dt*.9;
+    const n=w.sp.king?1:1+w.n,R=78+7*w.n;
+    // loose floating positions (cached on the weapon so the draw matches)
+    w.pos=w.pos||[];
+    for(let i=0;i<n;i++){const ga=ghostAng+i/n*TAU+Math.sin(ghostAng*1.3+i)*.4;
+      w.pos[i]={x:player.x+Math.cos(ga)*R,y:player.y+Math.sin(ga)*R-Math.sin(performance.now()/420+i*2)*10};}
+    w.pos.length=n;
+    w.t-=dt;if(w.t<=0){const tgt=nearTgt(760);
       if(tgt){w.t=WDEF.ghost.base.cd/w.rate*player.cdMul*cdScale;
-        for(let i=0;i<n;i++){const ga=ghostAng+i/n*TAU,gx=player.x+Math.cos(ga)*R,gy=player.y+Math.sin(ga)*R;
-          const a=Math.atan2(tgt.y-gy,tgt.x-gx);
-          bullets.push({kind:'ghostb',x:gx,y:gy,vx:Math.cos(a)*480,vy:Math.sin(a)*480,
-            dmg:WD('ghost',w)*(w.sp.king?2.6:1),r:(w.sp.king?13:7)*w.size,life:1.4,pierce:w.sp.king?2:0,
-            rot:a,spr:'ghostb',homing:w.sp.legion?1:0,tgt:w.sp.legion?tgt:null,glow:w.lvl,gcol:'#b8a8ff'});}
+        for(let i=0;i<n;i++){const g=w.pos[i],a=Math.atan2(tgt.y-g.y,tgt.x-g.x);
+          bullets.push({kind:'ghostb',x:g.x,y:g.y,vx:Math.cos(a)*300,vy:Math.sin(a)*300,
+            dmg:WD('ghost',w)*(w.sp.king?2.6:1),r:(w.sp.king?13:8)*w.size,life:2.2,pierce:w.sp.king?2:0,
+            rot:a,spr:'ghostb',homing:1,tgt,glow:w.lvl,gcol:'#b8a8ff'});} // ALL bolts home — spooky tracking
         tone(540,.08,'sine',.05,820);}else w.t=.12;}}
   // turrets (yarn SS)
   for(let i=turrets.length-1;i>=0;i--){const tu=turrets[i];
@@ -1077,11 +1084,13 @@ function updateEnemy(e,dt){
     case 'dart':{const sp=e.sp*(.5+.8*Math.abs(Math.sin(e.wob)));
       e.x+=(dx/d*sp+Math.cos(e.wob*1.7)*28)*dt;e.y+=(dy/d*sp+Math.sin(e.wob*1.7)*28)*dt;break;}
     case 'turret':{S.t=(S.t||rnd(1,2))-dt;
-      if(S.t<=0&&d<620){S.t=2.5;sShot();
-        // acorn fires a 3-way spread; dandelion a single seed
-        if(e.type==='acorn'){const ba=Math.atan2(dy,dx);
-          for(let i=-1;i<=1;i++)efire(e.x,e.y-8,Math.cos(ba+i*.25)*200,Math.sin(ba+i*.25)*200,'acornp',7,4.5,e.dmg);}
-        else efire(e.x,e.y,dx/d*190,dy/d*190,'thorn',7,4,9);
+      if(S.t<=0&&d<640){
+        if(e.type==='acorn'){S.t=3.6;sThud();
+          // 곡사포: lob ONE acorn that arcs up and lands as a small AoE blast
+          const tx=player.x+rnd(-40,40),ty=player.y+rnd(-40,40),fly=1.0;
+          fxs.push({kind:'lob',x0:e.x,y0:e.y-10,x1:tx,y1:ty,t:0,dur:fly});
+          addZone(tx,ty,76,fly,0,e.dmg+3);}
+        else{S.t=2.5;sShot();efire(e.x,e.y,dx/d*190,dy/d*190,'thorn',7,4,9);}
         puff(e.x,e.y-10,2);}break;}
     case 'shooter':{ // mobile ranged — hovers at mid range and pecks shots at you
       const want=270,m=(d-want)/Math.abs(d-want||1);
@@ -1503,7 +1512,7 @@ function gainXP(v){
   player.xp+=v;
   while(player.xp>=player.xpNext&&player.level<LV_MAX){
     player.xp-=player.xpNext;player.level++;
-    player.xpNext=Math.floor(7+player.level*6+player.level*player.level*.7);
+    player.xpNext=Math.floor(5+player.level*2.6+player.level*player.level*.16);
     pendingLv++;}
   if(player.level>=LV_MAX)player.xp=0;
   if(pendingLv>0&&state==='playing'&&levelDelay<=0){
@@ -1591,8 +1600,10 @@ function update(dt){
       continue;}
     if(player.iT<=0&&dist2(b.x,b.y,player.x,player.y)<(b.r+player.r)*(b.r+player.r)){
       ebullets.splice(i,1);
-      if(player.block&&Math.random()<player.block){floater(player.x,player.y-28,'막음!','#5aa843',false);
-        tone(700,.06,'square',.08);for(let k=0;k<5;k++)parts.push({x:b.x,y:b.y,vx:rnd(-3,3),vy:rnd(-3,3),life:.3,col:'#5aa843',sz:3});}
+      if(player.block&&Math.random()<player.block){floater(player.x,player.y-30,'차단!','#b07a44',true);
+        tone(520,.08,'sine',.08,360);
+        for(let k=0;k<9;k++){const a=rnd(0,TAU),v=rnd(1.5,4.5);
+          parts.push({x:b.x,y:b.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-1,life:rnd(.4,.8),col:['#b07a44','#d8a868','#fff3e0'][k%3],sz:rnd(3,6),puff:1});}}
       else hurtPlayer(b.dmg);}}
   // zones
   for(let i=zones.length-1;i>=0;i--){const z=zones[i];
@@ -1634,7 +1645,7 @@ function update(dt){
   // fx & cosmetics
   for(let i=fxs.length-1;i>=0;i--){const f=fxs[i];f.t+=dt;
     if(f.kind==='nova')f.r+=(f.max-f.r)*dt*9;
-    const dur=f.kind==='bolt'?.14:f.kind==='beam'?(f.warn>0?99:.18):f.kind==='tongue'?.2:f.kind==='hiss'?.5:f.kind==='claw'?.22:f.kind==='spark'?.18:f.kind==='shock'?.4:.45;
+    const dur=f.kind==='bolt'?.14:f.kind==='beam'?(f.warn>0?99:.18):f.kind==='tongue'?.2:f.kind==='hiss'?.5:f.kind==='claw'?.22:f.kind==='spark'?.18:f.kind==='shock'?.4:f.kind==='lob'?f.dur:.45;
     if(f.t>dur&&!(f.kind==='beam'&&f.warn>0))fxs.splice(i,1);}
   for(let i=parts.length-1;i>=0;i--){const p=parts[i];
     p.x+=p.vx;p.y+=p.vy;p.vx*=.94;p.vy*=.94;p.life-=dt*1.7;if(p.life<=0)parts.splice(i,1);}
@@ -1933,11 +1944,10 @@ function draw(){
     for(let i=0;i<n;i++){const a=fishAng+i/n*TAU;
       drawStk(w.sp.shark?STK.shark:STK.fish,player.x+Math.cos(a)*R,player.y+Math.sin(a)*R,
         a+Math.PI/2,w.size,false);}}
-  // orbiting ghost familiars (cosmetic; they fire ghostb bullets)
-  if(player.weapons.ghost){const w=player.weapons.ghost,n=w.sp.king?1:1+w.n,R=64+6*w.n;
-    for(let i=0;i<n;i++){const a=ghostAng+i/n*TAU;ctx.globalAlpha=.88;
-      drawStk(STK.ghostFam,player.x+Math.cos(a)*R,player.y+Math.sin(a)*R-Math.sin(performance.now()/300+i)*4,
-        0,(w.sp.king?1.5:1)*(1+(w.size-1)*.5),false);}
+  // ghost familiars — float loosely (semi-transparent, bobbing) at their actual fire positions
+  if(player.weapons.ghost&&player.weapons.ghost.pos){const w=player.weapons.ghost;
+    for(const g of w.pos){ctx.globalAlpha=.55+.15*Math.sin(performance.now()/300+g.x);
+      drawStk(STK.ghostFam,g.x,g.y,Math.sin(performance.now()/500+g.y)*.15,(w.sp.king?1.6:1)*(1+(w.size-1)*.5),false);}
     ctx.globalAlpha=1;}
   // bullets (player) — streak + glow that grows with weapon power
   for(const b of bullets){
@@ -1975,10 +1985,25 @@ function draw(){
     ctx.lineTo(f.x2,f.y2);ctx.stroke();}
   // 데스 레이저 빔 — fat red beam flash
   for(const f of fxs)if(f.kind==='laserbeam'){
-    const a=Math.max(0,1-f.t/.22);ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.ang);
-    ctx.globalAlpha=a*.5;ctx.fillStyle='#ff4f6a';ctx.fillRect(0,-16,f.len,32);
-    ctx.globalAlpha=a;ctx.fillStyle='#ff8aa0';ctx.fillRect(0,-8,f.len,16);
-    ctx.fillStyle='#fff';ctx.fillRect(0,-3,f.len,6);ctx.restore();ctx.globalAlpha=1;}
+    const a=Math.max(0,1-f.t/.22),wd=f.wid||20;ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.ang);
+    ctx.globalAlpha=a*.5;ctx.fillStyle='#ff4f6a';ctx.fillRect(0,-wd/2,f.len,wd);
+    ctx.globalAlpha=a;ctx.fillStyle='#ff8aa0';ctx.fillRect(0,-wd*.28,f.len,wd*.56);
+    ctx.fillStyle='#fff';ctx.fillRect(0,-wd*.1,f.len,wd*.2);ctx.restore();ctx.globalAlpha=1;}
+  // lobbed acorn (곡사포) — arcing projectile with a shadow under the landing spot
+  for(const f of fxs)if(f.kind==='lob'){const pr=clamp(f.t/f.dur,0,1);
+    const x=f.x0+(f.x1-f.x0)*pr,y=f.y0+(f.y1-f.y0)*pr,arc=Math.sin(pr*Math.PI)*90;
+    ctx.globalAlpha=.2;ctx.fillStyle='#1c3206';
+    ctx.beginPath();ctx.ellipse(x,y,9*(1-arc/120),4,0,0,TAU);ctx.fill();ctx.globalAlpha=1;
+    drawStk(STK.acorn,x,y-arc,pr*8,.6);}
+  // laser aim telegraph — thin dashed pointer + blinking dot (삐비빅)
+  {const lw=player.weapons&&player.weapons.laser;
+   if(lw&&lw.aim>0){const a=lw.ang,x2=player.x+Math.cos(a)*880,y2=player.y+Math.sin(a)*880;
+     ctx.globalAlpha=.5+.3*Math.sin(performance.now()/40);
+     ctx.strokeStyle='#ff3c5a';ctx.lineWidth=1.5;ctx.setLineDash([6,7]);
+     ctx.beginPath();ctx.moveTo(player.x,player.y);ctx.lineTo(x2,y2);ctx.stroke();ctx.setLineDash([]);
+     const tx=lw.aimTgt&&enemies.includes(lw.aimTgt)?lw.aimTgt.x:x2,ty=lw.aimTgt&&enemies.includes(lw.aimTgt)?lw.aimTgt.y:y2;
+     ctx.fillStyle='#ff3c5a';ctx.beginPath();ctx.arc(tx,ty,5+2*Math.sin(performance.now()/40),0,TAU);ctx.fill();
+     ctx.globalAlpha=1;}}
   // 천벌 sky strike — thick jagged bolt from above + flash
   for(const f of fxs)if(f.kind==='sky'){
     const a=Math.max(0,1-f.t/.4);ctx.globalAlpha=a;
@@ -2142,16 +2167,19 @@ function drawHUD(){
   ctx.strokeText(label,W/2,top+6);
   ctx.fillStyle=masterMode?'#ff9a4c':'#fff';
   ctx.fillText(label,W/2,top+6);
-  // no clock — just a small bar filling toward the next boss (icon shows mid vs final)
+  // boss gated by LEVEL — bar fills as you level toward the next boss
   if(!bossOn&&!midOn){
-    const toMid=!midDone&&gTime<MID_AT;
-    const seg=toMid?[0,MID_AT]:[MID_AT,BOSS_AT];
-    const frac=clamp((gTime-seg[0])/(seg[1]-seg[0]),0,1);
+    const toMid=!midDone&&player.level<MID_LV;
+    const seg=toMid?[0,MID_LV]:[MID_LV,BOSS_LV];
+    const lvF=(player.level-seg[0]+clamp(player.xp/player.xpNext,0,1))/(seg[1]-seg[0]);
+    const frac=clamp(lvF,0,1);
     const bw=120,bx=W/2-bw/2,by=top+22;
     ctx.font='13px serif';ctx.textAlign='center';ctx.fillText(toMid?'⚔':'👹',W/2-bw/2-12,by+9);
     ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(bx,by,bw,7);
     ctx.fillStyle=toMid?'#ffb02f':'#ff6a6a';ctx.fillRect(bx,by,bw*frac,7);
-    ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=1.5;ctx.strokeRect(bx,by,bw,7);}
+    ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=1.5;ctx.strokeRect(bx,by,bw,7);
+    ctx.fillStyle='rgba(255,255,255,.85)';ctx.font='900 9px Jua,sans-serif';
+    ctx.fillText('Lv.'+(toMid?MID_LV:BOSS_LV)+' 보스',W/2,by-2);}
   ctx.textAlign='right';ctx.font='900 14px Jua,sans-serif';
   ctx.strokeText('💀 '+kills,W-pad,top+10);ctx.fillStyle='#fff';ctx.fillText('💀 '+kills,W-pad,top+10);
   ctx.strokeText('🪙 '+runCoins,W-pad,top+28);ctx.fillStyle='#ffe066';ctx.fillText('🪙 '+runCoins,W-pad,top+28);
@@ -2246,11 +2274,11 @@ function genCard(boost){
   for(const k of owned){const w=player.weapons[k];
     if(w.lvl>=5&&!w.evo&&EVOS[k])for(const ev of EVOS[k])
       opts.push({kind:'evo',key:k,ev,tier:'SS',disp:'SSS',wgt:3.2});}
-  // new shared weapons (innates are auto-owned, never offered as "new")
-  if(nonInn.length<3)for(const k in WDEF)if(!WDEF[k].innate&&!player.weapons[k])
-    opts.push({kind:'new',key:k,tier,wgt:2});
-  else for(const k in WDEF)if(!WDEF[k].innate&&!player.weapons[k])
-    opts.push({kind:'new',key:k,tier,wgt:.45});
+  // new shared weapons — HARD CAP at 4 total weapons (innate + 3) to force build focus.
+  // odds drop sharply as you approach the cap, then stop entirely.
+  if(owned.length<4){const nwgt=owned.length<=2?2.4:0.5;
+    for(const k in WDEF)if(!WDEF[k].innate&&!player.weapons[k])
+      opts.push({kind:'new',key:k,tier,wgt:nwgt});}
   // variants — SYNERGY: invested weapons weighted higher (build-focusing)
   for(const k of owned){const w=player.weapons[k];if(w.evo)continue;
     for(const v of VARS[k])if(v.t===tier)
@@ -2258,8 +2286,9 @@ function genCard(boost){
   // passives
   for(const k in PASS)if((player.passN[k]||0)<6)
     opts.push({kind:'pass',key:k,tier,wgt:1.5});
-  // defensive (revive only at SS roll)
+  // defensive (revive only at SS roll; 털망토 stops at 30%)
   for(const k in DEFS){const D=DEFS[k];if((player.defN&&player.defN[k]||0)>=D.max)continue;
+    if(k==='block'&&(player.block||0)>=.30)continue;
     if(D.sss){if(tier==='SS')opts.push({kind:'def',key:k,tier:'SS',disp:'SSS',wgt:5});}
     else opts.push({kind:'def',key:k,tier,wgt:1.15});}
   if(!opts.length)return null;
@@ -2280,7 +2309,7 @@ function cardHTML(p){
     name=p.v.n;cl=D.name;desc=p.v.d;}
   else if(p.kind==='def'){const D=DEFS[p.key];
     icon=`<img src="${cvURL(ICONS[D.icon])}">`;
-    name=D.name;cl='🛡 방어';desc=D.d(player);}
+    name=D.name;cl='🛡 방어';desc=D.d(player,p.tier);}
   else{const D=PASS[p.key];
     icon=`<img src="${cvURL(ICONS[D.icon])}">`;
     name=D.name;cl=p.tier==='SS'?'초월 강화!':p.tier==='S'?'대폭 강화!':'강화';desc=D.d(p.tier);}
@@ -2296,7 +2325,7 @@ function applyCard(p){
   else if(p.kind==='var'){const w=player.weapons[p.key];p.v.fx(w);
     w.lvl=(w.lvl||0)+1;w.pow=(w.pow||0)+({C:1,B:1,A:2,S:3,SS:4}[p.tier]||1);}
   else if(p.kind==='def'){player.defN=player.defN||{};
-    player.defN[p.key]=(player.defN[p.key]||0)+1;DEFS[p.key].fx(player);}
+    player.defN[p.key]=(player.defN[p.key]||0)+1;DEFS[p.key].fx(player,p.tier);}
   else{const v=PV[p.key][p.tier];
     player.passN[p.key]=(player.passN[p.key]||0)+1;
     if(p.key==='hp'){player.maxhp+=v;
@@ -2436,7 +2465,7 @@ function nav(scr){
   for(const s of['scrHome','scrStage','scrShop','scrCats','scrCode','scrRank'])hide(s);
   show(scr);refreshMenu();
   if(scr==='scrRank')openRank();
-  if(scr==='scrCode')$('codeText').value=expCode();}
+  if(scr==='scrCode'){$('cloudName').textContent=(SV.name||'고양이')+'냥';$('cloudMsg').textContent='';}}
 function refreshMenu(){
   $('nickLabel').textContent='🐱 '+(SV.name||'고양이')+'냥';
   for(const id of['coinLabel','coinLabel2','coinLabel3','coinLabel4','coinLabel5'])
@@ -2503,7 +2532,7 @@ function refreshMenu(){
         sChest();refreshMenu();toast(c.name+' 영입 완료! 🎉');}
       else{sHiss();toast('코인 부족! 🪙'+(c.price-SV.coins)+' 더 필요');}};
     cg.appendChild(el);}
-  $('codeText').value=expCode();}
+}
 $('btnPlay').onclick=()=>nav('scrStage');
 $('btnShop').onclick=()=>nav('scrShop');
 $('btnCats').onclick=()=>nav('scrCats');
@@ -2560,11 +2589,6 @@ $('btnInvite').onclick=async()=>{
   const txt='🐱 냥냥 서바이버 — 귀여운 고양이로 동네 악당을 혼내주는 게임! 같이 하자냥 → '+location.href;
   try{if(navigator.share){await navigator.share({text:txt});return;}
     await navigator.clipboard.writeText(txt);toast('초대 링크 복사 완료! 📋');}catch(e){}};
-$('codeCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('codeText').value);
-  toast('코드 복사 완료! 📋');}catch(e){}};
-$('codeImport').onclick=()=>{
-  if(impCode($('codeInput').value)){toast('불러오기 성공! 🎉');refreshMenu();}
-  else toast('코드가 올바르지 않아요 😿');};
 // results buttons
 $('rRetry').onclick=()=>{hide('results');startStage(stage);};
 $('rNext').onclick=()=>{hide('results');startStage(Math.min(STAGES.length,stage+1));};

@@ -200,18 +200,13 @@
     <button class="ghost backBtn">← 뒤로</button>
   </div>
   <div class="panel hidden" id="scrCode">
-    <b style="font-size:18px">☁️ 클라우드 저장</b>
-    <div class="sub">이름 + 4자리 PIN으로 어느 기기에서나 이어하기!</div>
-    <input id="cloudPin" maxlength="6" placeholder="나만의 PIN (숫자 4자리 등)" style="margin-bottom:8px">
-    <div style="display:flex;gap:8px"><button id="cloudSaveBtn" class="ghost" style="flex:1">☁️ 저장하기</button>
-      <button id="cloudLoadBtn" class="ghost" style="flex:1">📥 불러오기</button></div>
+    <b style="font-size:18px">☁️ 클라우드 저장 / 이어하기</b>
+    <div class="sub">이름 + 나만의 PIN으로 어느 기기에서나 이어하기!<br>다른 폰에서 같은 이름·PIN을 넣고 <b>불러오기</b> 하세요.</div>
+    <div class="sub" style="margin:8px 0 2px">내 이름: <b id="cloudName" style="color:#e8651f"></b></div>
+    <input id="cloudPin" maxlength="8" placeholder="나만의 PIN (예: 1234)" style="margin-bottom:8px">
+    <button id="cloudSaveBtn" class="big green">☁️ 클라우드에 저장</button>
+    <button id="cloudLoadBtn" class="big blue">📥 불러오기</button>
     <div class="sub" id="cloudMsg" style="min-height:18px;margin:6px 0;color:#5aa843"></div>
-    <hr style="border:none;border-top:2px dashed #cdbfa4;margin:8px 0">
-    <b style="font-size:15px">💾 오프라인 코드</b>
-    <textarea id="codeText" readonly style="height:48px"></textarea>
-    <div style="display:flex;gap:8px"><button id="codeCopy" class="ghost" style="flex:1">📋 코드 복사</button></div>
-    <textarea id="codeInput" placeholder="코드 붙여넣어 불러오기" style="height:48px"></textarea>
-    <button id="codeImport" class="ghost">코드로 불러오기</button>
     <button class="ghost backBtn">← 뒤로</button>
   </div>
 </div>
