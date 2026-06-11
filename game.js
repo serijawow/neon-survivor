@@ -370,7 +370,7 @@ function rollTier(boost){
 // ================= dopamine drop-skills (powerful, brief, consumable) =================
 const SKILLS={
   rage:{stk:'it_rage',name:'폭주',uses:1,dur:7,buff:'berserk',d:'7초간 공격속도·공격력 폭발!'},
-  nocd:{stk:'it_nocd',name:'쿨타임 해제',uses:1,dur:6,buff:'nocd',d:'6초간 모든 쿨타임 무제한!'},
+  tiger:{stk:'it_tiger',name:'호랑이 기운',uses:1,dur:5,buff:'tiger',d:'5초간 무적 + 공격력 3배!'},
   inv:{stk:'it_inv',name:'무적냥',uses:1,dur:5,buff:'invinc',d:'5초간 완전 무적!'},
   clone:{stk:'it_clone',name:'분신술',uses:1,dur:9,buff:'clone',d:'9초간 분신 2마리 소환!'},
   bolt:{stk:'it_bolt',name:'천벌',uses:2,instant:'bolt',d:'모든 적에게 즉시 낙뢰!'},
@@ -384,26 +384,26 @@ const SKILL_KEYS=Object.keys(SKILLS);
 const STAGES=[
   {n:'동네 풀밭',icon:'🌼',shape:{k:'rect',w:1600,h:1200},bg:0,boss:'boar',elite:'slime',mid:'weasel',bossAt:78,
    d:'포근한 풀밭. 낮잠 자기 딱 좋은데…',vil:'boar',vline:'꿀꿀! 여긴 이제 멧돼지님 구역이다!',cline:'낮잠 방해한 죄… 무겁다냥!',
-   waves:[{t:0,rate:.82,pool:[['mouse',5]]},{t:22,rate:.6,pool:[['mouse',5],['bee',2],['dande',2],['slime',1.2]]},
-     {t:46,rate:.44,pool:[['mouse',4],['bee',3],['dande',2],['slime',1.2],['frog',1]]},
-     {t:64,rate:.34,pool:[['mouse',4],['bee',3],['dande',2.5],['slime',1.2],['frog',1],['hedge',1]]}],
+   waves:[{t:0,rate:.82,pool:[['mouse',5]]},{t:22,rate:.6,pool:[['mouse',5],['dande',3],['slime',1.2]]},
+     {t:46,rate:.44,pool:[['mouse',4],['dande',3],['slime',1.2],['frog',1]]},
+     {t:64,rate:.34,pool:[['mouse',4],['dande',3],['slime',1.2],['frog',1],['hedge',1]]}],
    surges:[34,60]},
   {n:'골목 주차장',icon:'🅿️',shape:{k:'rect',w:1900,h:1000},bg:1,boss:'topgun',elite:'pigeon',mid:'sparrow',bossAt:82,
    d:'비둘기파가 점령한 주차장.',vil:'topgun',vline:'구구! 여긴 비둘기파 구역이다!',cline:'주차위반이다냥. 견인해주마!',
-   waves:[{t:0,rate:.8,pool:[['mouse',4],['fly',3]]},{t:22,rate:.58,pool:[['fly',3],['pigeon',3],['mouse',2]]},
-     {t:46,rate:.44,pool:[['pigeon',3],['mosq',3],['fly',2]]},{t:66,rate:.34,pool:[['pigeon',3],['mosq',3],['dande',2],['fly',2]]}],
+   waves:[{t:0,rate:.8,pool:[['mouse',4],['fly',3]]},{t:22,rate:.56,pool:[['fly',3],['pigeon',3],['mouse',2],['bee',2]]},
+     {t:46,rate:.42,pool:[['pigeon',3],['mosq',3],['fly',2],['bee',2]]},{t:66,rate:.32,pool:[['pigeon',3],['mosq',3],['bee',2],['fly',2]]}],
    surges:[36,64]},
   {n:'놀이터 모래밭',icon:'🏖️',shape:{k:'circ',R:780},bg:2,boss:'toad',elite:'pebble',mid:'mole',bossAt:84,
    d:'모래밭이 끈적끈적해졌다…!',vil:'toad',vline:'두껍아 두껍아~ 새 집 내놔라 개굴!',cline:'모래밭은 모두의 것이다냥!',
-   waves:[{t:0,rate:.78,pool:[['ant',5],['pebble',2]]},{t:24,rate:.54,pool:[['ant',4],['pebble',2],['bee',2],['acorn',2]]},
-     {t:48,rate:.4,pool:[['ant',4],['bee',3],['acorn',2],['mosq',2],['wasp',1.2]]},
-     {t:68,rate:.32,pool:[['ant',4],['bee',3],['acorn',2],['mosq',2],['pebble',2],['wasp',1.2]]}],
+   waves:[{t:0,rate:.78,pool:[['ant',5],['pebble',2]]},{t:24,rate:.54,pool:[['ant',4],['pebble',2],['acorn',3]]},
+     {t:48,rate:.4,pool:[['ant',4],['acorn',3],['mosq',2],['wasp',1.2]]},
+     {t:68,rate:.32,pool:[['ant',4],['acorn',3],['mosq',2],['pebble',2],['wasp',1.2]]}],
    surges:[38,66]},
   {n:'시장 골목',icon:'🧺',shape:{k:'rect',w:2200,h:760},bg:3,boss:'duo',elite:'wasp',mid:'firefly',bossAt:86,
    d:'좁고 긴 골목. 도망칠 곳이 없다!',vil:'flyB',vline:'위이잉~ 시장 보호비 내놔라!',cline:'양아치들은 퇴치한다냥!',
    waves:[{t:0,rate:.76,pool:[['mouse',4],['fly',3]]},{t:24,rate:.54,pool:[['mouse',4],['mosq',3],['bee',2],['hedge',1.2]]},
-     {t:48,rate:.4,pool:[['mouse',3],['mosq',3],['bee',3],['acorn',2],['hedge',1.2],['wasp',1.2]]},
-     {t:70,rate:.3,pool:[['mosq',3],['bee',3],['acorn',2],['pigeon',2],['hedge',1.2],['wasp',1.2]]}],
+     {t:48,rate:.4,pool:[['mouse',3],['mosq',3],['bee',3],['hedge',1.2],['wasp',1.2]]},
+     {t:70,rate:.3,pool:[['mosq',3],['bee',3],['pigeon',2],['hedge',1.2],['wasp',1.2]]}],
    surges:[40,68]},
   {n:'아파트 옥상',icon:'🌆',shape:{k:'rect',w:1200,h:1200},bg:4,boss:'racc',elite:'dande',mid:'waspU',bossAt:88,
    d:'노을 지는 옥상. 쓰레기 냄새가 난다.',vil:'racc',vline:'크큭, 내 보물(쓰레기)들을 노리러 왔나?',cline:'분리수거 해주마냥!',
@@ -413,20 +413,20 @@ const STAGES=[
   {n:'하수도',icon:'🕳️',shape:{k:'ring',R:820,r:300},bg:5,boss:'frogq',elite:'mouse',mid:'bigslime',bossAt:90,
    d:'빙글 도는 둥근 하수도. 미끌미끌!',vil:'frogq',vline:'개굴~ 이 하수도는 슬라임 여왕 거다!',cline:'으, 미끌거린다냥! 빨리 끝내자!',
    waves:[{t:0,rate:.74,pool:[['mouse',4],['fly',3]]},{t:24,rate:.5,pool:[['mouse',3],['mosq',3],['bee',2],['slime',1.2]]},
-     {t:50,rate:.38,pool:[['mouse',3],['mosq',3],['bee',3],['acorn',2],['slime',1.2],['snake',1]]},
-     {t:74,rate:.3,pool:[['mosq',3],['bee',3],['acorn',2],['slime',1.2],['snake',1],['wasp',1.2]]}],
+     {t:50,rate:.38,pool:[['mouse',3],['mosq',3],['bee',3],['slime',1.2],['snake',1]]},
+     {t:74,rate:.3,pool:[['mosq',3],['bee',3],['slime',1.2],['snake',1],['wasp',1.2]]}],
    surges:[44,72]},
   {n:'뒷산 오솔길',icon:'🌲',shape:{k:'rect',w:2400,h:700},bg:6,boss:'dogB',elite:'hedge',mid:'badger',bossAt:92,
    d:'정상으로 가는 마지막 길목.',vil:'dogB',vline:'멍멍! 이 길은 못 지나간다!',cline:'산책 중이다냥. 비켜라!',
-   waves:[{t:0,rate:.72,pool:[['mouse',4],['bee',2]]},{t:24,rate:.5,pool:[['mouse',3],['bee',3],['dande',2],['hedge',1.2],['frog',1]]},
-     {t:52,rate:.38,pool:[['mouse',3],['bee',3],['acorn',2],['dande',2],['hedge',1.2],['snake',1],['wasp',1.2]]},
-     {t:76,rate:.3,pool:[['mouse',3],['bee',3],['acorn',2],['mosq',2],['hedge',1.2],['snake',1],['wasp',1.2]]}],
+   waves:[{t:0,rate:.72,pool:[['mouse',4],['acorn',2]]},{t:24,rate:.5,pool:[['mouse',3],['acorn',3],['hedge',1.2],['frog',1]]},
+     {t:52,rate:.38,pool:[['mouse',3],['acorn',3],['mosq',2],['hedge',1.2],['snake',1],['wasp',1.2]]},
+     {t:76,rate:.3,pool:[['mouse',3],['acorn',3],['mosq',2],['hedge',1.2],['snake',1],['wasp',1.2]]}],
    surges:[46,74]},
   {n:'뒷산 정상',icon:'🌙',shape:{k:'circ',R:740},bg:7,boss:'mage',elite:'snake',mid:'golem',bossAt:98,
    d:'모든 악당의 우두머리가 기다린다…',vil:'mage',vline:'찍찍… 용케 왔군. 이 몸이 동네의 새 주인이다!',cline:'동네는 못 넘본다냥. 끝장이다냥!!',
-   waves:[{t:0,rate:.7,pool:[['mouse',3],['bee',2]]},{t:24,rate:.46,pool:[['mouse',3],['bee',3],['dande',2],['wasp',1.2],['hedge',1.2]]},
-     {t:52,rate:.36,pool:[['mouse',3],['bee',3],['acorn',2],['dande',2],['mosq',2],['wasp',1.2],['hedge',1.2],['snake',1]]},
-     {t:78,rate:.28,pool:[['bee',3],['acorn',2],['dande',2],['mosq',3],['wasp',1.2],['hedge',1.2],['snake',1],['frog',1]]}],
+   waves:[{t:0,rate:.7,pool:[['mouse',3],['dande',2]]},{t:24,rate:.46,pool:[['mouse',3],['dande',3],['wasp',1.2],['hedge',1.2]]},
+     {t:52,rate:.36,pool:[['mouse',3],['dande',3],['mosq',2],['wasp',1.2],['hedge',1.2],['snake',1]]},
+     {t:78,rate:.28,pool:[['dande',3],['mosq',3],['wasp',1.2],['hedge',1.2],['snake',1],['frog',1]]}],
    surges:[40,66,88],elite2:'wasp'},
 ];
 const MOB={
@@ -473,7 +473,8 @@ let player=null,enemies=[],bullets=[],ebullets=[],gems=[],coinDrops=[],drops=[],
 let cam={x:0,y:0},shake=0,freezeT=0,slowT=0,flashR=0,flashW=0;
 let spawnT=0,pendingLv=0,levelDelay=0,fishAng=0,walkT=0,tutT=4;
 let bossOn=false,bossDone=false,eliteDone=false,midDone=false,midOn=false,frzT=0,skillCd=0,cdT=0,lastCdN=0,echoQ=[];
-const MID_AT=120,BOSS_AT=240; // fixed: midboss at 2:00, final boss at 4:00
+const MID_AT=90,BOSS_AT=180; // fixed: midboss at 1:30, final boss at 3:00
+const LV_MAX=15;
 let midLoot=0; // pending count of luck-boosted level-ups (midboss reward)
 let surged=[],hitStop=0,masterMode=false;
 let joy={on:false,id:-1,ax:0,ay:0,dx:0,dy:0};
@@ -574,7 +575,7 @@ function spawnEnemy(type,ax,ay){
   if(x===undefined){const p=arenaSpot(300,600);x=p.x;y=p.y;}
   // bosses: much tankier so the fight lasts & you must survive the patterns.
   // mid-bosses get a smaller bump than full bosses.
-  const bossHp=d.boss?(d.mid?(1.7+(stage-1)*.18):(2.3+(stage-1)*.26)):0;
+  const bossHp=d.boss?(d.mid?(2.4+(stage-1)*.22):(3.6+(stage-1)*.42)):0;
   const e={type,stk:d.stk,x,y,r:d.r,hp:d.hp*(d.boss?bossHp:mobHpMul()),
     maxhp:0,sp:d.sp*(d.boss?1:mobSpMul()),xp:d.xp,dmg:d.dmg,coin:d.coin||0,beh:d.beh,boss:d.boss||null,mid:d.mid||false,
     flash:0,bIT:0,wob:rnd(0,TAU),kx:0,ky:0,st:{},vx:0,vy:0,meals:0,scale:1,face:1,stun:0,elite:false,sq:0};
@@ -723,7 +724,7 @@ function dropItem(x,y,kind){if(drops.length>24)return;
   drops.push({x,y,kind,t:rnd(0,3)});}
 function hurtPlayer(dmg){
   if(player.iT>0||state!=='playing')return;
-  if(player.buffs&&player.buffs.invinc){floater(player.x,player.y-30,'무적!','#ffd23e',true);return;}
+  if(player.buffs&&(player.buffs.invinc||player.buffs.tiger)){floater(player.x,player.y-30,'무적!','#ffd23e',true);return;}
   if(player.shieldT>0){floater(player.x,player.y-30,'무적!','#ffd23e',true);return;}
   if(player.dodge&&Math.random()<player.dodge){player.iT=.35;
     floater(player.x,player.y-30,'회피!','#7ec8ff',true);tone(900,.08,'sine',.1,1400);
@@ -739,11 +740,12 @@ function hurtPlayer(dmg){
   for(const e of enemies){if(e.boss)continue;
     const d=Math.sqrt(dist2(e.x,e.y,player.x,player.y));
     if(d<160){e.kx+=(e.x-player.x)/d*250;e.ky+=(e.y-player.y)/d*250;}}
-  // 가시 갑옷 반사
-  if(player.reflect){const R=120+player.reflect*40;
+  // 가시 갑옷 — 확률 반격 (Lv1 35% → Lv3 ~79%)
+  if(player.reflect&&Math.random()<(.13+player.reflect*.22)){const R=120+player.reflect*40;
     fxs.push({kind:'nova',x:player.x,y:player.y,r:14,max:R,t:0,col:'#ff7a4f'});
+    floater(player.x,player.y-46,'반격!','#ff7a4f',false);
     for(const e of enemies.slice())if(dist2(player.x,player.y,e.x,e.y)<R*R)
-      damageEnemy(e,(18+player.reflect*14)*player.dmgMul,player.x,player.y);}
+      damageEnemy(e,(22+player.reflect*16)*player.dmgMul,player.x,player.y);}
   const TH=player.maxhp*.25;
   if(player.hp<=TH&&before>TH&&player.hp>0){slowT=.45;banner('☠ 위험!!','#ff3860',1);}
   if(player.hp<=0){
@@ -784,7 +786,7 @@ function useSkill(){
   skillCd=.5;const key=player.skill.key,S=SKILLS[key];
   player.skill.uses--;if(player.skill.uses<=0)player.skill=null;
   if(S.buff){player.buffs[S.buff]=S.dur;sLevel();flashW=.8;
-    const labels={berserk:'😤 폭주!! 미쳐 날뛴다!',nocd:'♾️ 쿨타임 무제한!!',invinc:'✨ 무적냥!!',clone:'👯 분신술!!'};
+    const labels={berserk:'😤 폭주!! 미쳐 날뛴다!',tiger:'🐯 호랑이 기운!! 무적+3배!',invinc:'✨ 무적냥!!',clone:'👯 분신술!!'};
     banner(labels[S.buff]||S.name,'#ffd23e',1.6);
     if(S.buff==='clone'){clones=[{a:0},{a:Math.PI}];}
     return;}
@@ -812,7 +814,7 @@ const DEFS={
   block:{name:'참치캔 방패',icon:'mag',max:4,col:'#5aa843',
     d:p=>'투사체 차단 +12% (현재 '+Math.round((p.block||0)*100)+'%)',fx:p=>p.block=Math.min(.55,(p.block||0)+.12)},
   reflect:{name:'가시 갑옷',icon:'dmg',max:3,col:'#ff7a4f',
-    d:p=>'피격 시 주변에 가시 반격 (Lv.'+((p.reflect||0)+1)+')',fx:p=>p.reflect=(p.reflect||0)+1},
+    d:p=>'피격 시 '+Math.round((.13+((p.reflect||0)+1)*.22)*100)+'% 확률로 가시 반격',fx:p=>p.reflect=(p.reflect||0)+1},
   luck:{name:'네잎클로버',icon:'luck',max:5,col:'#5aa843',
     d:p=>'카드 등급 운 UP! (Lv.'+((p.luck||0)+1)+')',fx:p=>p.luck=(p.luck||0)+1},
   haste:{name:'바람 방울',icon:'spd',max:4,col:'#7ec8ff',
@@ -824,8 +826,8 @@ function updateWeapons(dt){
   const wp=player.weapons,bf=player.buffs;
   // dopamine buffs scale fire-rate / kill cooldowns
   const rateB=(bf.berserk?2.4:1);
-  const cdScale=(bf.nocd?0.06:1)/rateB;
-  const WD=(k,w)=>WDEF[k].base.dmg*w.dmg*player.dmgMul*(bf.rage?1.6:1);
+  const cdScale=1/rateB;
+  const WD=(k,w)=>WDEF[k].base.dmg*w.dmg*player.dmgMul*(bf.rage?1.6:1)*(bf.tiger?3:1);
   // ---------- 냥냥펀치 ----------
   if(wp.paw){const w=wp.paw,cd=WDEF.paw.base.cd/w.rate*player.cdMul*cdScale;
     w.t-=dt;if(w.t<=0){const tgt=nearTgt(740);
@@ -1416,11 +1418,13 @@ function gameOver(){
 function fmtT(t){return ((t/60)|0)+':'+String((t%60)|0).padStart(2,'0');}
 // ================= update =================
 function gainXP(v){
+  if(player.level>=LV_MAX){player.xp=0;return;} // capped — max level ~15 over a stage
   player.xp+=v;
-  while(player.xp>=player.xpNext){
+  while(player.xp>=player.xpNext&&player.level<LV_MAX){
     player.xp-=player.xpNext;player.level++;
-    player.xpNext=Math.floor(5+player.level*3.4+player.level*player.level*.26);
+    player.xpNext=Math.floor(7+player.level*6+player.level*player.level*.7);
     pendingLv++;}
+  if(player.level>=LV_MAX)player.xp=0;
   if(pendingLv>0&&state==='playing'&&levelDelay<=0){
     levelDelay=.4;sLevel();flashW=.6;
     banner('🐾 LEVEL UP!','#ffe066',.9);
@@ -1486,7 +1490,10 @@ function update(dt){
       if(b.kind==='yarn'){yarnBoom(b);bullets.splice(i,1);break;}
       let dm=b.dmg;if(b.bossMul&&e.boss)dm*=b.bossMul;
       damageEnemy(e,dm,b.x,b.y);burst(b.x,b.y,['#ffe066','#fff'],3,4);
-      if(b.pierce>0)b.pierce--;else bullets.splice(i,1);
+      // killing a monster does NOT use up pierce — the shot tears straight through.
+      // pierce is only spent passing through an enemy that SURVIVES the hit.
+      if(b.pierce>0){if(e.hp>0)b.pierce--;}
+      else bullets.splice(i,1);
       break;}}}
   // hostile bullets
   for(let i=ebullets.length-1;i>=0;i--){const b=ebullets[i];
@@ -1738,16 +1745,16 @@ function draw(){
   drawArena();
   // map obstacles (under everything)
   for(const ob of obstacles)drawObstacle(ob);
-  // zones — solid translucent red
+  // zones — light tint + clean ring (warning), inner fill shows imminent hit. less red-overload.
   for(const z of zones){
-    if(z.warn>0){const pr=1-z.warn/z.max;
-      ctx.fillStyle='rgba(255,50,50,.3)';
+    if(z.warn>0){const pr=clamp(1-z.warn/z.max,0,1);
+      ctx.fillStyle='rgba(255,64,64,.11)';
       ctx.beginPath();ctx.arc(z.x,z.y,z.r,0,TAU);ctx.fill();
-      ctx.fillStyle='rgba(255,90,90,.35)';
+      ctx.fillStyle='rgba(255,72,72,.26)';
       ctx.beginPath();ctx.arc(z.x,z.y,z.r*pr,0,TAU);ctx.fill();
-      ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=3;
+      ctx.strokeStyle='rgba(255,86,86,.85)';ctx.lineWidth=3;
       ctx.beginPath();ctx.arc(z.x,z.y,z.r,0,TAU);ctx.stroke();}
-    else{ctx.fillStyle=`rgba(255,50,50,${.3+.1*Math.sin(performance.now()/90)})`;
+    else{ctx.fillStyle='rgba(255,60,60,.26)';
       ctx.beginPath();ctx.arc(z.x,z.y,z.r,0,TAU);ctx.fill();}}
   // beams — translucent red rect
   for(const f of fxs)if(f.kind==='beam'&&f.warn>0){
@@ -1934,8 +1941,8 @@ function draw(){
     ctx.beginPath();ctx.ellipse(player.x,player.y+16,16,6,0,0,TAU);ctx.fill();ctx.globalAlpha=1;
     // buff aura
     const bf=player.buffs;
-    if(bf.berserk||bf.invinc||bf.nocd||bf.rage){
-      const col=bf.invinc?'#ffd75a':bf.berserk?'#ff5f3c':'#9ad0ff';
+    if(bf.berserk||bf.invinc||bf.tiger||bf.rage){
+      const col=bf.tiger?'#ff9a2f':bf.invinc?'#ffd75a':bf.berserk?'#ff5f3c':'#9ad0ff';
       ctx.globalAlpha=.3+.15*Math.sin(performance.now()/70);
       ctx.fillStyle=col;ctx.beginPath();ctx.arc(player.x,player.y,30,0,TAU);ctx.fill();
       ctx.globalAlpha=1;}
@@ -2033,11 +2040,16 @@ function drawHUD(){
   ctx.strokeText(label,W/2,top+6);
   ctx.fillStyle=masterMode?'#ff9a4c':'#fff';
   ctx.fillText(label,W/2,top+6);
+  // no clock — just a small bar filling toward the next boss (icon shows mid vs final)
   if(!bossOn&&!midOn){
-    const toMid=!midDone&&gTime<MID_AT, left=Math.max(0,(toMid?MID_AT:BOSS_AT)-gTime);
-    ctx.font='900 22px Jua,sans-serif';
-    const tstr=(toMid?'⚔ ':'👹 ')+fmtT(left);
-    ctx.strokeText(tstr,W/2,top+30);ctx.fillStyle=toMid?'#ffb02f':'#fff';ctx.fillText(tstr,W/2,top+30);}
+    const toMid=!midDone&&gTime<MID_AT;
+    const seg=toMid?[0,MID_AT]:[MID_AT,BOSS_AT];
+    const frac=clamp((gTime-seg[0])/(seg[1]-seg[0]),0,1);
+    const bw=120,bx=W/2-bw/2,by=top+22;
+    ctx.font='13px serif';ctx.textAlign='center';ctx.fillText(toMid?'⚔':'👹',W/2-bw/2-12,by+9);
+    ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(bx,by,bw,7);
+    ctx.fillStyle=toMid?'#ffb02f':'#ff6a6a';ctx.fillRect(bx,by,bw*frac,7);
+    ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=1.5;ctx.strokeRect(bx,by,bw,7);}
   ctx.textAlign='right';ctx.font='900 14px Jua,sans-serif';
   ctx.strokeText('💀 '+kills,W-pad,top+10);ctx.fillStyle='#fff';ctx.fillText('💀 '+kills,W-pad,top+10);
   ctx.strokeText('🪙 '+runCoins,W-pad,top+28);ctx.fillStyle='#ffe066';ctx.fillText('🪙 '+runCoins,W-pad,top+28);

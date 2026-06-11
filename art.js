@@ -574,7 +574,7 @@ const STK={
   // items
   coin:badge('🪙',24),chicken:badge('🍗',30),
   it_nuke:badge('💥',30),it_bolt:badge('⚡',30),it_frz:badge('💤',30),it_hole:badge('🌀',30),
-  it_rage:badge('😤',30),it_gat:badge('🔫',30),it_clone:badge('👯',30),it_inv:badge('✨',30),it_nocd:badge('♾️',30),
+  it_rage:badge('😤',30),it_tiger:badge('🐯',30),it_clone:badge('👯',30),it_inv:badge('✨',30),
 };
 // ================= stage backgrounds (muted, no clutter) =================
 function mkBg(base,fn){const c=document.createElement('canvas');c.width=c.height=420;
