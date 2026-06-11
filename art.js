@@ -380,6 +380,14 @@ const ICONS={
   hp:iconCanvas((g,r)=>{g.font='38px "Segoe UI Emoji",sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('❤️',0,2);}),
   dmg:iconCanvas((g,r)=>{g.font='38px "Segoe UI Emoji",sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('🔥',0,2);}),
   cd:iconCanvas((g,r)=>{g.font='38px "Segoe UI Emoji",sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('⏩',0,2);}),
+  laser:iconCanvas((g,r)=>{g.strokeStyle='#ff3c5a';g.lineWidth=r*.3;g.lineCap='round';
+    g.beginPath();g.moveTo(-r*.7,r*.5);g.lineTo(r*.7,-r*.5);g.stroke();
+    g.strokeStyle='#fff';g.lineWidth=r*.1;g.stroke();
+    g.fillStyle='#ff3c5a';g.beginPath();g.arc(r*.7,-r*.5,r*.22,0,TAU);g.fill();}),
+  ghost:iconCanvas((g,r)=>{g.fillStyle='#cdbfff';g.strokeStyle='#7b5fd0';g.lineWidth=r*.1;
+    g.beginPath();g.arc(0,-r*.1,r*.6,Math.PI,0);g.lineTo(r*.6,r*.5);
+    for(let i=0;i<3;i++)g.quadraticCurveTo(r*.6-i*r*.4-r*.2,r*.7,r*.6-i*r*.4-r*.4,r*.5);
+    g.closePath();g.fill();g.stroke();dotEye(g,-r*.2,-r*.1,r*.12);dotEye(g,r*.2,-r*.1,r*.12);}),
   luck:iconCanvas((g,r)=>{g.fillStyle='#4faa3e';g.strokeStyle='#2c6b22';g.lineWidth=r*.08;
     for(let i=0;i<4;i++){g.save();g.rotate(i/4*TAU);
       g.beginPath();g.moveTo(0,-r*.12);g.bezierCurveTo(r*.5,-r*.7,r*.5,-r*.1,0,-r*.12);
@@ -575,6 +583,14 @@ const STK={
   coin:badge('🪙',24),chicken:badge('🍗',30),
   it_nuke:badge('💥',30),it_bolt:badge('⚡',30),it_frz:badge('💤',30),it_hole:badge('🌀',30),
   it_rage:badge('😤',30),it_tiger:badge('🐯',30),it_clone:badge('👯',30),it_inv:badge('✨',30),
+  ghostFam:toon(26,(g,r)=>{g.fillStyle='#d6caff';g.strokeStyle='#7b5fd0';g.lineWidth=r*.1;
+    g.beginPath();g.arc(0,-r*.15,r*.7,Math.PI,0);g.lineTo(r*.7,r*.55);
+    for(let i=0;i<4;i++)g.quadraticCurveTo(r*.7-i*r*.35-r*.17,r*.8,r*.7-i*r*.35-r*.35,r*.55);
+    g.closePath();g.fill();g.stroke();
+    dotEye(g,-r*.22,-r*.12,r*.13);dotEye(g,r*.22,-r*.12,r*.13);
+    blushy(g,-r*.5,r*.05,r*.13);blushy(g,r*.5,r*.05,r*.13);}),
+  ghostb:toon(14,(g,r)=>{g.fillStyle='#c4b0ff';g.strokeStyle='#fff';g.lineWidth=r*.16;
+    g.beginPath();g.arc(0,0,r*.85,0,TAU);g.fill();g.stroke();el(g,-r*.2,-r*.2,r*.22,r*.22,'#fff',0);}),
 };
 // ================= stage backgrounds (muted, no clutter) =================
 function mkBg(base,fn){const c=document.createElement('canvas');c.width=c.height=420;

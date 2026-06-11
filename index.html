@@ -41,10 +41,17 @@
   button.ghost{background:linear-gradient(180deg,#f3ead6,#e7dcc4);color:#7a6a52;text-shadow:none;
     font-size:min(4vw,15px);padding:10px 24px;box-shadow:0 4px 0 #b9ac92}
   button.ghost:active{box-shadow:0 1px 0 #b9ac92}
-  button.big{display:block;width:100%;margin:7px 0;padding:15px;font-size:min(5.6vw,21px)}
-  button.blue{background:linear-gradient(180deg,#5fb6e8,#3f96d8)}
-  button.green{background:linear-gradient(180deg,#7ec85e,#5aa843)}
-  button.pink{background:linear-gradient(180deg,#ff8ab0,#f06a96)}
+  /* puffy candy buttons — glossy top, soft 3D, bouncy */
+  button.big{display:block;width:100%;margin:9px 0;padding:16px 18px;font-size:min(5.9vw,22px);
+    position:relative;overflow:hidden;border-width:3.5px;
+    border-radius:32px 26px 34px 28px/28px 34px 26px 32px;text-shadow:0 2px 0 rgba(90,50,20,.35);
+    box-shadow:0 6px 0 #5b4632,0 11px 16px rgba(0,0,0,.24),inset 0 3px 0 rgba(255,255,255,.55),inset 0 -5px 0 rgba(0,0,0,.13)}
+  button.big::after{content:'';position:absolute;left:7%;right:7%;top:5px;height:36%;border-radius:18px;
+    background:linear-gradient(180deg,rgba(255,255,255,.6),rgba(255,255,255,0));pointer-events:none}
+  button.big:active{transform:translateY(4px);box-shadow:0 2px 0 #5b4632,inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.12)}
+  button.blue{background:linear-gradient(180deg,#86d6f7,#46a8e2)}
+  button.green{background:linear-gradient(180deg,#aee472,#6dc23f)}
+  button.pink{background:linear-gradient(180deg,#ffb0d2,#ff7aa8)}
   button:disabled{filter:grayscale(.8);opacity:.6;transform:none}
   input{border:3px solid #5a4632;border-radius:14px;padding:12px;font-size:18px;font-weight:800;
     font-family:inherit;width:100%;text-align:center;background:#fff;color:#4a3b2a;outline:none}

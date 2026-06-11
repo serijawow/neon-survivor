@@ -239,6 +239,8 @@ const WDEF={
   fish:{name:'빙글 생선',icon:'fish',base:{cd:0,dmg:7}},
   bolt:{name:'정전기 찌릿',icon:'bolt',base:{cd:2.0,dmg:12}},
   nova:{name:'대왕 하악질',icon:'nova',base:{cd:3.2,dmg:14}},
+  laser:{name:'레이저 포인터',icon:'laser',base:{cd:.62,dmg:9}},
+  ghost:{name:'유령냥 친구',icon:'ghost',base:{cd:.9,dmg:8}},
 };
 // each card variant bumps w.lvl. When lvl>=5 and not evolved, the two SSS
 // evolutions (EVOS) become offerable — pick ONE to dramatically transform.
@@ -319,6 +321,24 @@ const VARS={
     {t:'A',n:'속사포 하악',d:'쿨다운 -28%',fx:w=>w.rate+=.28},
     {t:'S',n:'분노 폭발',d:'범위 +40% & 공격력 +30%',fx:w=>{w.size+=.4;w.dmg+=.3;}},
   ],
+  laser:[
+    {t:'C',n:'고출력',d:'레이저 공격력 +18%',fx:w=>w.dmg+=.18},
+    {t:'C',n:'속사 조준',d:'레이저 연사 +16%',fx:w=>w.rate+=.16},
+    {t:'B',n:'쌍열 레이저',d:'레이저 +1줄',fx:w=>w.n+=1},
+    {t:'B',n:'관통 광선',d:'관통 +2',fx:w=>w.pierce+=2},
+    {t:'A',n:'삼중 레이저',d:'레이저 +2줄',fx:w=>w.n+=2},
+    {t:'A',n:'집속 광선',d:'공격력 +45% & 굵기 +30%',fx:w=>{w.dmg+=.45;w.size+=.3;}},
+    {t:'S',n:'초고출력',d:'공격력 +60% & 관통 +3',fx:w=>{w.dmg+=.6;w.pierce+=3;}},
+  ],
+  ghost:[
+    {t:'C',n:'또렷한 영혼',d:'유령 공격력 +18%',fx:w=>w.dmg+=.18},
+    {t:'C',n:'빠른 영혼',d:'유령 연사 +16%',fx:w=>w.rate+=.16},
+    {t:'B',n:'유령 +1',d:'유령 친구 +1마리',fx:w=>w.n+=1},
+    {t:'B',n:'큰 영혼탄',d:'영혼탄 크기 +30%',fx:w=>w.size+=.3},
+    {t:'A',n:'유령 +2',d:'유령 친구 +2마리',fx:w=>w.n+=2},
+    {t:'A',n:'원혼',d:'유령 공격력 +45%',fx:w=>w.dmg+=.45},
+    {t:'S',n:'성불 거부',d:'유령 +1 & 공격력 +25%',fx:w=>{w.n+=1;w.dmg+=.25;}},
+  ],
 };
 // dual SSS final evolutions — pick ONE, weapon transforms dramatically & locks.
 const EVOS={
@@ -353,6 +373,14 @@ const EVOS={
   nova:[
     {id:'echo',n:'⭐메아리 군주',d:'하악질이 메아리치며 3연속 폭발!',fx:w=>{w.sp.echo=1;w.sp.dbl=1;}},
     {id:'aura',n:'⭐분노의 오라',d:'몸 주위에 상시 분노 장막, 닿는 적은 녹는다',fx:w=>{w.sp.aura=1;w.size+=.4;}},
+  ],
+  laser:[
+    {id:'death',n:'⭐데스 레이저',d:'정면을 꿰뚫는 초강력 빔! 닿는 모든 적 증발',fx:w=>{w.sp.death=1;w.dmg+=1.2;w.pierce+=20;}},
+    {id:'scatter',n:'⭐난반사 포인터',d:'사방으로 튕기는 레이저 다발!',fx:w=>{w.sp.scatter=1;w.n+=3;}},
+  ],
+  ghost:[
+    {id:'legion',n:'⭐유령 군단',d:'유령 친구가 잔뜩! 사방에서 영혼탄 비',fx:w=>{w.sp.legion=1;w.n+=4;w.rate+=.4;}},
+    {id:'king',n:'⭐대왕 원혼',d:'거대한 한 마리가 굵은 영혼탄을 퍼붓는다',fx:w=>{w.sp.king=1;w.size+=1;w.dmg+=1;}},
   ],
 };
 const PV={spd:{C:.08,B:.12,A:.18,S:.28,SS:.45},mag:{C:.25,B:.4,A:.6,S:.9,SS:1.4},
@@ -471,7 +499,7 @@ let state='menu',stage=1,ST=STAGES[0];
 let gTime=0,kills=0,combo=0,comboT=0,maxCombo=0,lastMile=0,runCoins=0;
 let player=null,enemies=[],bullets=[],ebullets=[],gems=[],coinDrops=[],drops=[],parts=[],floaters=[],fxs=[],banners=[],zones=[],turrets=[],obstacles=[];
 let cam={x:0,y:0},shake=0,freezeT=0,slowT=0,flashR=0,flashW=0;
-let spawnT=0,pendingLv=0,levelDelay=0,fishAng=0,walkT=0,tutT=4;
+let spawnT=0,pendingLv=0,levelDelay=0,fishAng=0,ghostAng=0,walkT=0,tutT=4;
 let bossOn=false,bossDone=false,eliteDone=false,midDone=false,midOn=false,frzT=0,skillCd=0,cdT=0,lastCdN=0,echoQ=[];
 const MID_AT=90,BOSS_AT=180; // fixed: midboss at 1:30, final boss at 3:00
 const LV_MAX=15;
@@ -942,6 +970,35 @@ function updateWeapons(dt){
     else{w.t-=dt;if(w.t<=0){w.t=cd;fireNova(w,1);
       if(w.sp.dbl)echoQ.push({x:player.x,y:player.y,t:.25,w,mul:1});
       if(w.sp.echo){echoQ.push({x:player.x,y:player.y,t:.55,w,mul:1.2});echoQ.push({x:player.x,y:player.y,t:1.05,w,mul:1.5});}}}}
+  // ---------- 레이저 포인터 ----------
+  if(wp.laser){const w=wp.laser,cd=WDEF.laser.base.cd/w.rate*player.cdMul*cdScale;
+    w.t-=dt;if(w.t<=0){const tgt=nearTgt(880);
+      if(tgt){w.t=cd;const base=Math.atan2(tgt.y-player.y,tgt.x-player.x);
+        if(w.sp.death){const len=900;
+          fxs.push({kind:'laserbeam',x:player.x,y:player.y,ang:base,len,t:0});
+          const x2=player.x+Math.cos(base)*len,y2=player.y+Math.sin(base)*len;
+          for(const e of enemies.slice())if(distSeg(e.x,e.y,player.x,player.y,x2,y2)<26*w.size+e.r*e.scale)
+            damageEnemy(e,WD('laser',w)*1.5,player.x,player.y);
+          shake=Math.max(shake,4);sZap();}
+        else{const n=1+w.n;
+          for(let i=0;i<n;i++){const a=base+(n>1?(i-(n-1)/2)*.11:0);
+            bullets.push({kind:'laser',x:player.x,y:player.y,vx:Math.cos(a)*1100,vy:Math.sin(a)*1100,
+              dmg:WD('laser',w),r:5*w.size,life:.72,pierce:2+w.pierce,rot:a,spr:'laser',glow:w.lvl,gcol:'#ff4f6a'});}
+          if(w.sp.scatter)for(let i=0;i<6;i++){const a=base+rnd(-.7,.7);
+            bullets.push({kind:'laser',x:player.x,y:player.y,vx:Math.cos(a)*880,vy:Math.sin(a)*880,
+              dmg:WD('laser',w)*.6,r:4*w.size,life:.6,pierce:1+w.pierce,rot:a,spr:'laser',glow:w.lvl,gcol:'#ff8a4f'});}
+          sShot();}}else w.t=.1;}}
+  // ---------- 유령냥 친구 (orbiting familiars that auto-fire) ----------
+  if(wp.ghost){const w=wp.ghost;ghostAng+=dt*1.5;
+    const n=w.sp.king?1:1+w.n,R=64+6*w.n;
+    w.t-=dt;if(w.t<=0){const tgt=nearTgt(720);
+      if(tgt){w.t=WDEF.ghost.base.cd/w.rate*player.cdMul*cdScale;
+        for(let i=0;i<n;i++){const ga=ghostAng+i/n*TAU,gx=player.x+Math.cos(ga)*R,gy=player.y+Math.sin(ga)*R;
+          const a=Math.atan2(tgt.y-gy,tgt.x-gx);
+          bullets.push({kind:'ghostb',x:gx,y:gy,vx:Math.cos(a)*480,vy:Math.sin(a)*480,
+            dmg:WD('ghost',w)*(w.sp.king?2.6:1),r:(w.sp.king?13:7)*w.size,life:1.4,pierce:w.sp.king?2:0,
+            rot:a,spr:'ghostb',homing:w.sp.legion?1:0,tgt:w.sp.legion?tgt:null,glow:w.lvl,gcol:'#b8a8ff'});}
+        tone(540,.08,'sine',.05,820);}else w.t=.12;}}
   // turrets (yarn SS)
   for(let i=turrets.length-1;i>=0;i--){const tu=turrets[i];
     tu.t-=dt;tu.cd-=dt;
@@ -1852,6 +1909,12 @@ function draw(){
     for(let i=0;i<n;i++){const a=fishAng+i/n*TAU;
       drawStk(w.sp.shark?STK.shark:STK.fish,player.x+Math.cos(a)*R,player.y+Math.sin(a)*R,
         a+Math.PI/2,w.size,false);}}
+  // orbiting ghost familiars (cosmetic; they fire ghostb bullets)
+  if(player.weapons.ghost){const w=player.weapons.ghost,n=w.sp.king?1:1+w.n,R=64+6*w.n;
+    for(let i=0;i<n;i++){const a=ghostAng+i/n*TAU;ctx.globalAlpha=.88;
+      drawStk(STK.ghostFam,player.x+Math.cos(a)*R,player.y+Math.sin(a)*R-Math.sin(performance.now()/300+i)*4,
+        0,(w.sp.king?1.5:1)*(1+(w.size-1)*.5),false);}
+    ctx.globalAlpha=1;}
   // bullets (player) — streak + glow that grows with weapon power
   for(const b of bullets){
     const gl=b.glow||0;
@@ -1867,6 +1930,9 @@ function draw(){
     if(b.spr==='rapid'){ctx.fillStyle='#fffbe0';ctx.strokeStyle=OUT;ctx.lineWidth=2;
       ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.rot);
       ctx.beginPath();ctx.ellipse(0,0,7,3.5,0,0,TAU);ctx.fill();ctx.stroke();ctx.restore();}
+    else if(b.spr==='laser'){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.rot);
+      ctx.fillStyle=b.gcol||'#ff4f6a';ctx.beginPath();ctx.ellipse(0,0,(b.r||5)*2.4,(b.r||5)*.7,0,0,TAU);ctx.fill();
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(0,0,(b.r||5)*1.6,(b.r||5)*.3,0,0,TAU);ctx.fill();ctx.restore();}
     else drawStk(STK[b.spr],b.x,b.y,b.rot,(b.scale||1)*(1+Math.min(gl,6)*.04));
     // sparkle orbiters on very high power
     if(gl>=5){const a=performance.now()/90+b.x;
@@ -1883,6 +1949,12 @@ function draw(){
     for(let i=1;i<seg;i++){const t=i/seg;
       ctx.lineTo(f.x1+(f.x2-f.x1)*t+rnd(-12,12),f.y1+(f.y2-f.y1)*t+rnd(-12,12));}
     ctx.lineTo(f.x2,f.y2);ctx.stroke();}
+  // 데스 레이저 빔 — fat red beam flash
+  for(const f of fxs)if(f.kind==='laserbeam'){
+    const a=Math.max(0,1-f.t/.22);ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.ang);
+    ctx.globalAlpha=a*.5;ctx.fillStyle='#ff4f6a';ctx.fillRect(0,-16,f.len,32);
+    ctx.globalAlpha=a;ctx.fillStyle='#ff8aa0';ctx.fillRect(0,-8,f.len,16);
+    ctx.fillStyle='#fff';ctx.fillRect(0,-3,f.len,6);ctx.restore();ctx.globalAlpha=1;}
   // 천벌 sky strike — thick jagged bolt from above + flash
   for(const f of fxs)if(f.kind==='sky'){
     const a=Math.max(0,1-f.t/.4);ctx.globalAlpha=a;
