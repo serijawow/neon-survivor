@@ -1,9 +1,11 @@
 'use strict';
 // ================= canvas =================
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
-let W=0,H=0,DPR=1;
+let W=0,H=0,DPR=1,zoom=1;
 function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;
-  cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);}
+  cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
+  // zoom out on small screens so the player sees more of the world around them
+  zoom=Math.max(.58,Math.min(1,Math.min(W,H)/600));}
 addEventListener('resize',resize);resize();
 const $=id=>document.getElementById(id);
 const rnd=(a,b)=>a+Math.random()*(b-a);
@@ -1382,7 +1384,7 @@ function update(dt){
   cam.x+=(player.x-cam.x)*Math.min(1,dt*5);
   cam.y+=(player.y-cam.y)*Math.min(1,dt*5);
   const s=ST.shape,bw=s.k==='rect'?s.w/2:s.R,bh=s.k==='rect'?s.h/2:s.R;
-  const mX=Math.max(0,bw+60-W/2),mY=Math.max(0,bh+60-H/2);
+  const mX=Math.max(0,bw+60-(W/2)/zoom),mY=Math.max(0,bh+60-(H/2)/zoom);
   cam.x=clamp(cam.x,-mX,mX);cam.y=clamp(cam.y,-mY,mY);
   director(dt);
   updateWeapons(dt);
@@ -1488,18 +1490,21 @@ function yarnBoom(b){
   for(const e of enemies.slice())if(dist2(b.x,b.y,e.x,e.y)<R*R)damageEnemy(e,b.dmg,b.x,b.y);
   if(b.turret&&turrets.length<4)turrets.push({x:b.x,y:b.y,t:3,cd:.2});}
 // ================= draw =================
-function drawArena(ox,oy){
-  ctx.fillStyle=SKYS[ST.bg];ctx.fillRect(0,0,W,H);
+function drawArena(){
+  // assumes world transform (cam + zoom) is already applied
   const s=ST.shape;
-  ctx.save();ctx.translate(ox,oy);
+  ctx.save();
   ctx.beginPath();
   if(s.k==='rect')roundRectPath(-s.w/2,-s.h/2,s.w,s.h,34);
   else{ctx.arc(0,0,s.R,0,TAU);
     if(s.k==='ring')ctx.arc(0,0,s.r,0,TAU,true);}
   ctx.save();ctx.clip();
   const bg=BGS[ST.bg];
-  const x0=Math.floor((-ox)/420)*420,y0=Math.floor((-oy)/420)*420;
-  for(let x=x0;x<-ox+W+420;x+=420)for(let y=y0;y<-oy+H+420;y+=420)ctx.drawImage(bg,x,y);
+  // tile bg over the visible WORLD region (depends on cam + zoom)
+  const hw=(W/2)/zoom+420,hh=(H/2)/zoom+420;
+  const x0=Math.floor((cam.x-hw)/420)*420,y0=Math.floor((cam.y-hh)/420)*420;
+  const x1=cam.x+hw,y1=cam.y+hh;
+  for(let x=x0;x<x1;x+=420)for(let y=y0;y<y1;y+=420)ctx.drawImage(bg,x,y);
   // inner edge shading
   ctx.lineWidth=44;ctx.strokeStyle='rgba(0,0,0,.13)';
   ctx.beginPath();
@@ -1616,11 +1621,13 @@ function drawEb(b){ // hostile bullet: red halo + core
   else{ctx.fillStyle='#c0392b';ctx.beginPath();ctx.arc(0,0,b.r,0,TAU);ctx.fill();}
   ctx.restore();}
 function draw(){
-  const ox=W/2-cam.x,oy=H/2-cam.y;
+  // sky (screen space, covers shake margin)
+  ctx.fillStyle=SKYS[ST.bg];ctx.fillRect(0,0,W,H);
   ctx.save();
   if(shake>.4)ctx.translate(rnd(-shake,shake),rnd(-shake,shake));
-  drawArena(ox,oy);
-  ctx.translate(ox,oy);
+  // world transform: center on camera, zoomed out on small screens
+  ctx.translate(W/2,H/2);ctx.scale(zoom,zoom);ctx.translate(-cam.x,-cam.y);
+  drawArena();
   // map obstacles (under everything)
   for(const ob of obstacles)drawObstacle(ob);
   // zones — solid translucent red
