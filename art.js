@@ -567,6 +567,20 @@ const STK={
   wasp:toon(34,(g,r)=>waspFn(g,r)),
   snake:toon(46,(g,r)=>snakeFn(g,r)),
   pigeon:toon(36,(g,r)=>pigeonFn(g,r)),
+  wisp:toon(28,(g,r)=>{ // 도깨비불 (유도형) — 파란 불꽃 물방울 + 동그란 눈
+    g.fillStyle='#5ec8ff';g.strokeStyle='#2f86c8';g.lineWidth=r*.12;
+    g.beginPath();g.moveTo(0,-r);g.quadraticCurveTo(r*.92,-r*.1,0,r*.92);g.quadraticCurveTo(-r*.92,-r*.1,0,-r);g.closePath();g.fill();g.stroke();
+    el(g,0,r*.14,r*.44,r*.48,'#c7eeff',0);
+    dotEye(g,-r*.2,r*.02,r*.12);dotEye(g,r*.2,r*.02,r*.12);
+    blushy(g,-r*.42,r*.22,r*.12);blushy(g,r*.42,r*.22,r*.12);}),
+  spider:toon(32,(g,r)=>{ // 거미 (방해형) — 둥근 보랏빛 몸 + 다리 6개
+    g.strokeStyle=OUT;g.lineWidth=r*.13;g.lineCap='round';
+    for(const s of[-1,1])for(let k=0;k<3;k++){const ay=-r*.3+k*r*.34;
+      g.beginPath();g.moveTo(0,r*.05);g.quadraticCurveTo(s*r*.82,ay-r*.15,s*r*1.06,ay+r*.26);g.stroke();}
+    el(g,0,r*.05,r*.6,r*.54,'#6a5a7e',r*.12);
+    el(g,0,-r*.08,r*.32,r*.28,'#8a7a9e',0);
+    dotEye(g,-r*.18,-r*.05,r*.12);dotEye(g,r*.18,-r*.05,r*.12);
+    fang(g,-r*.12,r*.36,r*.18);fang(g,r*.12,r*.36,r*.18);}),
   boar:toon(84,(g,r)=>boarFn(g,r)),
   topgun:toon(76,(g,r)=>topgunFn(g,r)),
   frogq:toon(92,(g,r)=>frogqFn(g,r)),
