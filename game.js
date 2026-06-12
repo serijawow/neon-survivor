@@ -1,5 +1,5 @@
 'use strict';
-const GAME_VER='v5.3-fun-pass'; // 봇 플레이테스트 기반: 보스HP 카이팅 기준, 보스전 트리클 스폰, 진화 보장, 피격 완화+탈출가속, 밀도 상향
+const GAME_VER='v5.4-big-clear'; // 크고·직관·적게: 투사체/몹 확대+수 감소, 이동/회전속도 상향, 멧돼지 압박=돌진 불꽃자국(겹침형)
 // ================= canvas =================
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,zoom=1;
@@ -237,13 +237,13 @@ setInterval(()=>{
 // card-upgradeable like any weapon — e.g. 알파냥 gets piercing only via a card.
 const CATS=[
   {key:'a',stk:'cat_a',name:'알파냥',innate:'paw',price:0,
-   perk:'통통 노랑 줄무늬<br>🐾 냥냥펀치: 넓게 퍼지는 펀치',hp:105,spd:182,mod:p=>{}},
+   perk:'통통 노랑 줄무늬<br>🐾 냥냥펀치: 넓게 퍼지는 펀치',hp:105,spd:210,mod:p=>{}},
   {key:'b',stk:'cat_b',name:'까칠냥',innate:'claw',price:150,
-   perk:'삼색 까칠보스<br>🩸 흡혈 발톱: 근접 광역+회복',hp:120,spd:196,mod:p=>{p.dmgBase*=1.1;}},
+   perk:'삼색 까칠보스<br>🩸 흡혈 발톱: 근접 광역+회복',hp:120,spd:226,mod:p=>{p.dmgBase*=1.1;}},
   {key:'c',stk:'cat_c',name:'신사냥',innate:'rose',price:300,
-   perk:'가면의 신사<br>🌹 장미 저격: 묵직한 단발, 보스 특효',hp:92,spd:186,mod:p=>{}},
+   perk:'가면의 신사<br>🌹 장미 저격: 묵직한 단발, 보스 특효',hp:92,spd:214,mod:p=>{}},
   {key:'d',stk:'cat_d',name:'민첩냥',innate:'rapid',price:500,
-   perk:'바람의 회색 머리<br>💨 속사: 초고속 연사 + 빠른 발',hp:82,spd:226,mod:p=>{p.cdAcc*=.92;}},
+   perk:'바람의 회색 머리<br>💨 속사: 초고속 연사 + 빠른 발',hp:82,spd:262,mod:p=>{p.cdAcc*=.92;}},
 ];
 // ================= meta upgrades =================
 const UPS=[
@@ -650,6 +650,7 @@ function spawnEnemy(type,ax,ay){
     flash:0,bIT:0,wob:rnd(0,TAU),kx:0,ky:0,st:{},vx:0,vy:0,meals:0,scale:1,face:1,stun:0,elite:false,sq:0};
   // 보스 존재감 — 정예(×1.9)의 ~3배 덩치. 충돌/패턴 판정은 전부 r*scale 기준.
   if(d.boss){e.bscale=d.mid?1.7:2.3;e.scale=e.bscale;}
+  else{e.bscale=1.22;e.scale=1.22;} // 잡몹도 크고 또렷하게 (수는 줄임)
   if(masterMode){
     if(e.boss){e.hp*=1.5;e.dmg=Math.round(e.dmg*1.2);}
     else{e.hp*=1.7;e.dmg+=4;e.xp+=1;
@@ -719,10 +720,10 @@ function director(dt){
   if(spawnT<=0){const w=curWave();
     const ramp=player.level>=11?.62:player.level>=6?.78:1;
     // ×0.5 — 핵앤슬래시 밀도: 잡몹이 1방에 죽는 만큼 더 쏟아져야 시원함 + 레벨 페이스 유지
-    spawnT=Math.max(.14,w.rate*ramp*.5*(0.78+0.22*Math.sin(gTime)));
+    spawnT=Math.max(.16,w.rate*ramp*.66*(0.78+0.22*Math.sin(gTime))); // 적지만 큰 몹 — 밀도 대신 개체 존재감
     const pick=pickMob(w.pool);
     spawnEnemy(pick);
-    if(player.level>=5&&Math.random()<.3)spawnEnemy(pickMob(w.pool));
+    if(player.level>=5&&Math.random()<.24)spawnEnemy(pickMob(w.pool));
     if(player.level>=9&&Math.random()<.55)spawnEnemy(pickMob(w.pool));
     if(player.level>=13&&Math.random()<.4)spawnEnemy(pickMob(w.pool));}
   // 위험 장판 — 스테이지3+ 평상시에도 가끔 발밑에 예고 후 생기는 타일. '가만히 못 서게' 만드는 보조 압박.
@@ -873,7 +874,7 @@ function hurtPlayer(dmg){
     player.lives=0;gameOver(false);}}
 function efire(x,y,vx,vy,spr,r,life,dmg,o){
   if(ebullets.length>120)return;
-  ebullets.push(Object.assign({x,y,vx,vy,spr,r:r||8,life:life||5,dmg:dmg||9,
+  ebullets.push(Object.assign({x,y,vx,vy,spr,r:(r||8)*1.32,life:life||5,dmg:dmg||9, // 적탄도 크고 또렷하게 (수는 줄임)
     spin:rnd(-4,4),rot:rnd(0,TAU)},o||{}));}
 function addZone(x,y,r,warn,burn,dmg){
   if(zones.length>26)return;
@@ -956,11 +957,11 @@ function updateWeapons(dt){
         else{const n=1+w.n;
           for(let i=0;i<n;i++){const a=base+(i-(n-1)/2)*.15;
             bullets.push({kind:'paw',x:player.x,y:player.y,vx:Math.cos(a)*540,vy:Math.sin(a)*540,
-              dmg:WD('paw',w),r:7*w.size,life:1.3,pierce:w.pierce,rot:a,spr:'paw',scale:w.size,glow:w.lvl,gcol:'#ff8ab0',boomR:w.sp.boom?Math.round(46*w.size):0});}
-          const ring=w.sp.ring?(w.sp.ring>=2?12:8):0;
+              dmg:WD('paw',w),r:10*w.size,life:1.3,pierce:w.pierce,rot:a,spr:'paw',scale:w.size,glow:w.lvl,gcol:'#ff8ab0',boomR:w.sp.boom?Math.round(52*w.size):0});}
+          const ring=w.sp.ring?(w.sp.ring>=2?8:6):0; // 적지만 굵은 링 (백만냥 펀치)
           for(let i=0;i<ring;i++){const a=i/ring*TAU+gTime;
             bullets.push({kind:'paw',x:player.x,y:player.y,vx:Math.cos(a)*460,vy:Math.sin(a)*460,
-              dmg:WD('paw',w)*.55,r:6*w.size,life:.95,pierce:w.sp.ring>=2?1:0,rot:a,spr:'paw',scale:w.size*.85,glow:w.lvl,gcol:'#ff8ab0'});}}
+              dmg:WD('paw',w)*.8,r:8.5*w.size,life:.95,pierce:w.sp.ring>=2?1:0,rot:a,spr:'paw',scale:w.size*1.05,glow:w.lvl,gcol:'#ff8ab0'});}}
         sShot();}else w.t=.1;}}
   // ---------- 흡혈 발톱 (melee) — only swings when an enemy is actually in range ----------
   if(wp.claw){const w=wp.claw,cd=WDEF.claw.base.cd/w.rate*player.cdMul*cdScale;
@@ -983,9 +984,9 @@ function updateWeapons(dt){
         for(const e of enemies)e._clawT=0;
         // 흡혈은 '처치 흡혈'(killEnemy에서 N킬마다 목숨+1)로 대체 — 목숨제 전환
         for(const a of angs)fxs.push({kind:'claw',x:player.x,y:player.y,ang:a,t:0,r:R,full:w.sp.spin});
-        if(w.sp.thousand)for(let i=0;i<8;i++){const a=i/8*TAU;
+        if(w.sp.thousand)for(let i=0;i<5;i++){const a=i/5*TAU+gTime*.7; // 적지만 큰 칼날
           bullets.push({kind:'blade',x:player.x,y:player.y,vx:Math.cos(a)*460,vy:Math.sin(a)*460,
-            dmg:WD('claw',w)*.6,r:9,life:.8,pierce:2,rot:a,spr:'blade',glow:1,gcol:'#ff5a6a'});}
+            dmg:WD('claw',w)*.95,r:13,life:.8,pierce:2,rot:a,spr:'blade',scale:1.5,glow:2,gcol:'#ff5a6a'});}
         w.t=cd;noise(.05,.07,3000);}}}
   // ---------- 장미 저격 ----------
   if(wp.rose){const w=wp.rose,cd=WDEF.rose.base.cd/w.rate*player.cdMul*cdScale;
@@ -993,15 +994,15 @@ function updateWeapons(dt){
       if(tgt){w.t=cd;const base=Math.atan2(tgt.y-player.y,tgt.x-player.x);
         if(w.sp.thorn){
           bullets.push({kind:'rose',x:player.x,y:player.y,vx:Math.cos(base)*900,vy:Math.sin(base)*900,
-            dmg:WD('rose',w)*1.6,r:13*w.size,life:1.1,pierce:99,rot:base,spr:'rose',bossMul:w.bossMul||1.7,glow:3,gcol:'#ff3c6e',thorn:1});
+            dmg:WD('rose',w)*1.6,r:16*w.size,life:1.1,pierce:99,rot:base,spr:'rose',scale:1.3,bossMul:w.bossMul||1.7,glow:3,gcol:'#ff3c6e',thorn:1});
           shake=Math.max(shake,4);}
         else if(w.sp.storm){for(let i=0;i<2+w.n;i++){const a=base+rnd(-.5,.5);
           bullets.push({kind:'rose',x:player.x,y:player.y,vx:Math.cos(a)*460,vy:Math.sin(a)*460,
-            dmg:WD('rose',w)*.5,r:7*w.size,life:1.6,pierce:0,rot:a,spr:'rose',bossMul:w.bossMul||1.7,
+            dmg:WD('rose',w)*.5,r:9*w.size,life:1.6,pierce:0,rot:a,spr:'rose',bossMul:w.bossMul||1.7,
             tgt:enemies[(Math.random()*enemies.length)|0],homing:1,glow:2,gcol:'#ff6a9e'});}}
         else{const n=1+w.n;for(let i=0;i<n;i++){const a=base+(i-(n-1)/2)*.1;
           bullets.push({kind:'rose',x:player.x,y:player.y,vx:Math.cos(a)*760,vy:Math.sin(a)*760,
-            dmg:WD('rose',w),r:9*w.size,life:1.4,pierce:w.pierce,rot:a,spr:'rose',bossMul:w.bossMul||1.7,glow:w.lvl,gcol:'#ff6a9e',boomR:w.sp.boom?Math.round(54*w.size):0});}}
+            dmg:WD('rose',w),r:12*w.size,life:1.4,pierce:w.pierce,rot:a,spr:'rose',scale:1.15,bossMul:w.bossMul||1.7,glow:w.lvl,gcol:'#ff6a9e',boomR:w.sp.boom?Math.round(60*w.size):0});}}
         tone(840,.08,'triangle',.1,420);}else w.t=.1;}}
   // ---------- 속사 ----------
   if(wp.rapid){const w=wp.rapid,gat=w.sp.gatling,cd=WDEF.rapid.base.cd/w.rate*player.cdMul*cdScale*(gat?.45:1);
@@ -1010,7 +1011,7 @@ function updateWeapons(dt){
         const spread=w.sp.tight?.05:.12;
         for(let i=0;i<n;i++){const a=base+(n>1?(i-(n-1)/2)*spread:0)+rnd(-spread,spread)*.5;
           bullets.push({kind:'rapid',x:player.x,y:player.y,vx:Math.cos(a)*680,vy:Math.sin(a)*680,
-            dmg:WD('rapid',w),r:5*Math.min(1.4,w.size),life:1.2,pierce:w.pierce,rot:a,spr:'rapid',
+            dmg:WD('rapid',w),r:6.5*Math.min(1.4,w.size),life:1.2,pierce:w.pierce,rot:a,spr:'rapid',
             homing:w.sp.homing?1:0,tgt:w.sp.homing?tgt:null,glow:w.lvl,fork:w.sp.fork?1:0});}
         sShot();}else w.t=.08;}}
   // ---------- 털뭉치 폭탄 ----------
@@ -1025,9 +1026,9 @@ function updateWeapons(dt){
           glow:w.lvl,gcol:w.sp.red?'#ff6a6a':'#ffd23e'});}
       tone(460,.1,'triangle',.07,820);}}
   // ---------- 빙글 생선 ----------
-  if(wp.fish){const w=wp.fish;fishAng+=dt*(3.8*w.rate)*rateB;
+  if(wp.fish){const w=wp.fish;fishAng+=dt*(5.2*w.rate)*rateB;
     const n=(w.sp.whale?1:2+w.n+(w.sp.parade?0:0)),R=(w.sp.whale?96:82)+8*w.n;
-    const fr=(w.sp.whale?30:16)*w.size;
+    const fr=(w.sp.whale?36:21)*w.size;
     for(let i=0;i<n;i++){const a=fishAng+i/n*TAU,
       bx=player.x+Math.cos(a)*R,by=player.y+Math.sin(a)*R;
       eachNear(bx,by,fr+2,e=>{if(e.bIT<=0&&dist2(bx,by,e.x,e.y)<(fr+e.r*e.scale)**2){
@@ -1078,7 +1079,7 @@ function updateWeapons(dt){
         if(w.sp.scatter)for(let i=0;i<3+w.n;i++)beams.push(base+(i-(2+w.n)/2)*.2);
         else if(w.sp.death)beams.push(base);
         else for(let i=0;i<1+w.n;i++)beams.push(base+(w.n>0?(i-w.n/2)*.09:0));
-        for(const a of beams){const wid=(w.sp.death?30:11)*w.size;
+        for(const a of beams){const wid=(w.sp.death?36:15)*w.size;
           fxs.push({kind:'laserbeam',x:player.x,y:player.y,ang:a,len,wid,t:0});
           const x2=player.x+Math.cos(a)*len,y2=player.y+Math.sin(a)*len;
           for(const e of enemies.slice())if(distSeg(e.x,e.y,player.x,player.y,x2,y2)<wid/2+e.r*e.scale)
@@ -1089,7 +1090,7 @@ function updateWeapons(dt){
         tone(1300,.04,'square',.05);setTimeout(()=>{tone(1700,.05,'square',.05);},70);} // 삐비빅
       else w.t=.1;}}}
   // ---------- 유령냥 친구: 느슨히 떠다니며 적을 쫓는 유도 영혼탄 (생선=근접가드와 차별) ----------
-  if(wp.ghost){const w=wp.ghost;ghostAng+=dt*.9;
+  if(wp.ghost){const w=wp.ghost;ghostAng+=dt*1.6;
     const n=w.sp.king?1:1+w.n,R=78+7*w.n;
     // loose floating positions (cached on the weapon so the draw matches)
     w.pos=w.pos||[];
@@ -1100,7 +1101,7 @@ function updateWeapons(dt){
       if(tgt){w.t=WDEF.ghost.base.cd/w.rate*player.cdMul*cdScale;
         for(let i=0;i<n;i++){const g=w.pos[i],a=Math.atan2(tgt.y-g.y,tgt.x-g.x);
           bullets.push({kind:'ghostb',x:g.x,y:g.y,vx:Math.cos(a)*300,vy:Math.sin(a)*300,
-            dmg:WD('ghost',w)*(w.sp.king?2.6:1),r:(w.sp.king?13:8)*w.size,life:2.2,pierce:w.sp.king?2:0,
+            dmg:WD('ghost',w)*(w.sp.king?2.6:1),r:(w.sp.king?16:10.5)*w.size,life:2.2,pierce:w.sp.king?2:0,scale:1.3,
             rot:a,spr:'ghostb',homing:1,tgt,glow:w.lvl,gcol:'#b8a8ff'});} // ALL bolts home — spooky tracking
         tone(540,.08,'sine',.05,820);}else w.t=.12;}}
   // turrets (yarn SS)
@@ -1138,38 +1139,38 @@ function bossRageFlourish(e){
     case 'boar': // 멧돼지: 발구르기 충격파 + 사방 흙가시
       fxs.push({kind:'nova',x:e.x,y:e.y,r:18,max:212,t:0,col:'#d8a76a'});
       addZone(e.x,e.y,182,.7,0,e.dmg);
-      for(let i=0;i<10;i++){const a=i/10*TAU;efire(e.x,e.y,Math.cos(a)*150,Math.sin(a)*150,'thorn',7,4,e.dmg);}break;
+      for(let i=0;i<7;i++){const a=i/7*TAU;efire(e.x,e.y,Math.cos(a)*150,Math.sin(a)*150,'thorn',9,4,e.dmg);}break;
     case 'topgun': // 비둘기: 나선 탄막 폭주 (이중 링) + 추적 다트 2발
-      for(let r=0;r<2;r++)for(let i=0;i<10;i++){const a=i/10*TAU+r*.31;
-        efire(e.x,e.y,Math.cos(a)*(150+r*30),Math.sin(a)*(150+r*30),'dart',7,4,11);}
-      for(const off of[-.5,.5])efire(e.x,e.y,Math.cos(ba+off)*170,Math.sin(ba+off)*170,'dart',8,5.5,11,{homing:1.1});break;
+      for(let r=0;r<2;r++)for(let i=0;i<7;i++){const a=i/7*TAU+r*.4;
+        efire(e.x,e.y,Math.cos(a)*(150+r*30),Math.sin(a)*(150+r*30),'dart',9,4,11);}
+      for(const off of[-.5,.5])efire(e.x,e.y,Math.cos(ba+off)*170,Math.sin(ba+off)*170,'dart',10,5.5,11,{homing:1.1});break;
     case 'toad': // 두꺼비: 독무 분출 — 둘레에 독 웅덩이
       for(let i=0;i<6;i++)addZone(e.x+Math.cos(i/6*TAU)*120,e.y+Math.sin(i/6*TAU)*120,84,.7,2,13);
       floater(e.x,e.y-e.r-12,'독무 분출!','#7fae3e',true);break;
     case 'flyB': // 파리·말벌: 쫄따구 추가 + 광역 점액
       for(let i=0;i<4;i++)spawnEnemy('fly',e.x+rnd(-40,40),e.y+rnd(-40,40));
-      for(let i=0;i<12;i++){const a=i/12*TAU;efire(e.x,e.y,Math.cos(a)*170,Math.sin(a)*170,'goo',8,4,12);}
+      for(let i=0;i<8;i++){const a=i/8*TAU;efire(e.x,e.y,Math.cos(a)*170,Math.sin(a)*170,'goo',10,4,12);}
       floater(e.x,e.y-e.r-12,'쫄따구들 가랏!','#fff',true);break;
     case 'mosqB': // 모기: 부채꼴 흡혈 빔 3연발
       for(const off of[-.46,0,.46])addBeam(e.x,e.y,ba+off,480,52,.6,Math.round(e.dmg*.9));break;
     case 'racc': // 너구리: 쓰레기 뚜껑 난사
-      for(let i=0;i<8;i++){const a=i/8*TAU+.2;efire(e.x,e.y,Math.cos(a)*240,Math.sin(a)*240,'lid',10,2.6,12,{boom:.8});}break;
+      for(let i=0;i<6;i++){const a=i/6*TAU+.2;efire(e.x,e.y,Math.cos(a)*240,Math.sin(a)*240,'lid',12,2.6,12,{boom:.8});}break;
     case 'frogq': // 슬라임퀸: 슬라임 무더기 + 독 웅덩이
       for(let i=0;i<5;i++)spawnEnemy('slimeS',e.x+Math.cos(i/5*TAU)*42,e.y+Math.sin(i/5*TAU)*42);
       for(let i=0;i<3;i++)addZone(player.x+rnd(-110,110),player.y+rnd(-110,110),84,.9,0,14);
       floater(e.x,e.y-e.r-12,'끓어올라라!','#8fd45e',true);break;
     case 'snakeK': // 구렁이: 맹독 대폭발 링
-      for(let i=0;i<18;i++){const a=i/18*TAU+e.wob;efire(e.x,e.y,Math.cos(a)*155,Math.sin(a)*155,'venom',8,5,13);}break;
+      for(let i=0;i<11;i++){const a=i/11*TAU+e.wob;efire(e.x,e.y,Math.cos(a)*155,Math.sin(a)*155,'venom',10,5,13);}break;
     case 'dogB': // 불독: 포효 충격파 + 뼈다귀 산탄
       fxs.push({kind:'nova',x:e.x,y:e.y,r:20,max:190,t:0,col:'#c89a6a'});
       addZone(e.x,e.y,186,.7,0,e.dmg);
-      for(let i=-2;i<=2;i++)efire(e.x,e.y,Math.cos(ba+i*.22)*250,Math.sin(ba+i*.22)*250,'bone',10,2.6,12,{boom:.85});break;
+      for(let i=-1;i<=1;i++)efire(e.x,e.y,Math.cos(ba+i*.26)*250,Math.sin(ba+i*.26)*250,'bone',12,2.6,12,{boom:.85});break;
     case 'mage': // 대마법사: 이중 마법진 + 운석 세례 + 추적 오브
-      for(let i=0;i<16;i++){const a=i/16*TAU;efire(e.x,e.y,Math.cos(a)*150,Math.sin(a)*150,'orb',7,6,12);}
+      for(let i=0;i<11;i++){const a=i/11*TAU;efire(e.x,e.y,Math.cos(a)*150,Math.sin(a)*150,'orb',9,6,12);}
       for(let i=0;i<4;i++)addZone(player.x+rnd(-150,150),player.y+rnd(-150,150),66,.85,0,13);
-      for(const off of[-.6,.6])efire(e.x,e.y,Math.cos(ba+off)*140,Math.sin(ba+off)*140,'orb',8,6,12,{homing:.9});break;
+      for(const off of[-.6,.6])efire(e.x,e.y,Math.cos(ba+off)*140,Math.sin(ba+off)*140,'orb',10,6,12,{homing:.9});break;
     default: // 그 외: 보스 색에 맞춘 탄막 링
-      for(let i=0;i<12;i++){const a=i/12*TAU;efire(e.x,e.y,Math.cos(a)*160,Math.sin(a)*160,'orb',8,4.5,e.dmg);}
+      for(let i=0;i<9;i++){const a=i/9*TAU;efire(e.x,e.y,Math.cos(a)*160,Math.sin(a)*160,'orb',9,4.5,e.dmg);}
   }
 }
 // ================= 공간압박 패턴 (보스 페이즈) =================
@@ -1179,9 +1180,7 @@ function pressKit(e,phase){ // phase 2 = 발동(50%), phase 3 = 강화(25%)
   const s=ST.shape,aR=s.k==='rect'?Math.min(s.w,s.h)/2:s.R;
   const find=k=>press.find(q=>q.src===e&&q.kind===k);
   switch(e.beh){
-    case 'boar': // 멧돼지: "내 구역이다!" — 바깥부터 흙먼지 장막이 조여온다
-      if(phase===2)press.push({kind:'shrink',src:e,cx:0,cy:0,r:aR*1.04,rMin:aR*.6,rate:aR*.44/16,t:0});
-      else{const p=find('shrink');if(p){p.rMin=aR*.46;p.rate*=1.7;}}
+    case 'boar': // 멧돼지: 압박은 '가두는 원'이 아니라 돌진 자국 — 불타는 흙길이 쌓이며 설 자리가 좁아진다 (updateEnemy 돌진에서 처리)
       break;
     case 'topgun': // 비둘기: 기총소사 — 천천히 도는 사격 레인
       if(phase===2)press.push({kind:'sweep',src:e,n:1,ang:rnd(0,TAU),spd:.5,len:740,wd:46,warmup:1.3,t:0});
@@ -1381,6 +1380,9 @@ function updateEnemy(e,dt){
       else if(S.ph==='charge'){S.t-=dt;
         e.x+=Math.cos(S.ang)*560*dt;e.y+=Math.sin(S.ang)*560*dt;
         if(parts.length<460)parts.push({x:e.x+rnd(-10,10),y:e.y+rnd(-10,10),vx:0,vy:0,life:.4,col:'#d8cfc2',sz:7,puff:1});
+        // 분노 돌진은 불타는 흙길을 남긴다 — 돌진이 반복될수록 패턴이 겹쳐 설 자리가 좁아진다
+        if(S.rage){S.trail=(S.trail||0)-dt;
+          if(S.trail<=0){S.trail=.16;addZone(e.x,e.y,46,.05,2.6,12);}}
         if(S.t<=0){S.ph='dizzy';S.t=S.rage?1.3:1.9;sThud();shake=Math.max(shake,8);}} // 반격창: 1페이즈 길게(학습), 분노 시 짧게
       else if(S.ph==='stompW'){S.t-=dt;
         if(S.t<=0){S.ph='stalk';S.t=1.2;sThud();shake=Math.max(shake,9);
@@ -1397,12 +1399,12 @@ function updateEnemy(e,dt){
         S.volley-=dt;
         if(S.volley<=0){S.vt++;
           if(S.vt%2||!S.rage){S.volley=3.6;sShot(); // 1페이즈 = 링+돌진만(학습) — 나선은 2페이즈부터
-            for(let i=0;i<10;i++){const a=i/10*TAU;
-              efire(e.x,e.y,Math.cos(a)*140,Math.sin(a)*140,'dart',7,4,10);}}
-          else{S.volley=3.6;S.spiral=12;S.spT=0;S.spA=Math.atan2(dy,dx);}}
+            for(let i=0;i<7;i++){const a=i/7*TAU;
+              efire(e.x,e.y,Math.cos(a)*140,Math.sin(a)*140,'dart',9,4,10);}}
+          else{S.volley=3.6;S.spiral=8;S.spT=0;S.spA=Math.atan2(dy,dx);}}
         if(S.spiral>0){S.spT-=dt;
-          if(S.spT<=0){S.spT=.06;S.spiral--;S.spA+=.5;
-            efire(e.x,e.y,Math.cos(S.spA)*180,Math.sin(S.spA)*180,'dart',7,4,10);}}
+          if(S.spT<=0){S.spT=.09;S.spiral--;S.spA+=.62;
+            efire(e.x,e.y,Math.cos(S.spA)*180,Math.sin(S.spA)*180,'dart',9,4,10);}}
         if(S.t<=0){S.mode='aim';S.t=.55;S.ang2=Math.atan2(dy,dx);
           addBeam(e.x,e.y,S.ang2,720,64,.55,0);}}
       else if(S.mode==='aim'){S.t-=dt;
@@ -1457,8 +1459,8 @@ function updateEnemy(e,dt){
       S.goo=(S.goo===undefined?3.5:S.goo)-dt;
       if(S.goo<=0){S.goo=S.rage?3.6:6;sShot();
         const base=Math.atan2(dy,dx);
-        for(let i=0;i<5;i++){const a=base+(i-2)*.24;
-          efire(e.x,e.y,Math.cos(a)*175,Math.sin(a)*175,'goo',8,4,11);}}
+        for(let i=0;i<3;i++){const a=base+(i-1)*.3;
+          efire(e.x,e.y,Math.cos(a)*175,Math.sin(a)*175,'goo',11,4,11);}}
       S.lob=(S.lob===undefined?7:S.lob)-dt;
       if(S.lob<=0){S.lob=9;for(let i=0;i<2;i++)
         addZone(player.x+rnd(-90,90),player.y+rnd(-90,90),70,1,0,13);}
@@ -1520,9 +1522,9 @@ function updateEnemy(e,dt){
         e.x+=Math.cos(S.ang)*(ph2?640:560)*dt;e.y+=Math.sin(S.ang)*(ph2?640:560)*dt;
         if(S.t<=0){S.ph='slither';S.t=rnd(1.4,2.2);}}
       else if(S.ph==='venom'){S.t-=dt;
-        if(S.t<=0){sShot();const n=ph2?14:10;
+        if(S.t<=0){sShot();const n=ph2?9:6;
           for(let i=0;i<n;i++){const a=i/n*TAU+e.wob;
-            efire(e.x,e.y,Math.cos(a)*150,Math.sin(a)*150,'venom',8,5,12);}
+            efire(e.x,e.y,Math.cos(a)*150,Math.sin(a)*150,'venom',10,5,12);}
           S.ph='slither';S.t=rnd(1.6,2.4);}}
       else if(S.ph==='poison'){S.t-=dt;
         if(S.t<=0){sWarn();
@@ -1569,12 +1571,12 @@ function updateEnemy(e,dt){
         if(S.t<=0){S.cycle++;
           S.act=['ring','meteor','tele','summon'][S.cycle%4];S.t=.4;}}
       else if(S.act==='ring'){S.t-=dt;
-        if(S.t<=0){sZap();const n=ph2?20:13;
+        if(S.t<=0){sZap();const n=ph2?13:9;
           for(let i=0;i<n;i++){const a=i/n*TAU+S.cycle;
-            efire(e.x,e.y,Math.cos(a)*(ph2?165:130),Math.sin(a)*(ph2?165:130),'orb',7,6,12);}
+            efire(e.x,e.y,Math.cos(a)*(ph2?165:130),Math.sin(a)*(ph2?165:130),'orb',9,6,12);}
           if(ph2)setTimeout(()=>{if(state!=='playing'||e.hp<=0)return;
-            for(let i=0;i<13;i++){const a=i/13*TAU+S.cycle+.24;
-              efire(e.x,e.y,Math.cos(a)*145,Math.sin(a)*145,'orb',7,6,12);}},420);
+            for(let i=0;i<9;i++){const a=i/9*TAU+S.cycle+.3;
+              efire(e.x,e.y,Math.cos(a)*145,Math.sin(a)*145,'orb',9,6,12);}},420);
           S.act='idle';S.t=ph2?2:2.8;}}
       else if(S.act==='meteor'){S.t-=dt;
         if(S.t<=0){sWarn();S.met=ph2?8:6;S.metT=0;S.act='meting';}}
@@ -1645,8 +1647,8 @@ function updateEnemy(e,dt){
           else if(r<.72){S.ph='vanish';S.t=1.8;e.invis=1;sTele();puff(e.x,e.y,6);}
           else{S.ph='tele';S.t=.25;}}}
       else if(S.ph==='throw'){S.t-=dt;if(S.t<=0){sShot();
-        const star=8+(e.rage?4:0);for(let i=0;i<star;i++){const a=i/star*TAU+e.wob;
-          efire(e.x,e.y,Math.cos(a)*250,Math.sin(a)*250,'shuriken',8,3.2,e.dmg);}
+        const star=6+(e.rage?3:0);for(let i=0;i<star;i++){const a=i/star*TAU+e.wob;
+          efire(e.x,e.y,Math.cos(a)*250,Math.sin(a)*250,'shuriken',10,3.2,e.dmg);}
         S.ph='stalk';S.t=1.1;}}
       else if(S.ph==='vanish'){S.t-=dt;e.x+=dx/d*e.sp*1.5*dt;e.y+=dy/d*e.sp*1.5*dt;
         if(S.t<=0){e.invis=0;puff(e.x,e.y,6);S.ph='throw';S.t=.3;}}
@@ -1673,7 +1675,7 @@ function updateEnemy(e,dt){
             for(let i=0;i<dn;i++)addZone(player.x+rnd(-200,200),player.y+rnd(-200,200),82,.8+i*.16,1.6,14);}
           else{S.ph='crouch';S.t=.65;sWarn();}}}
       else if(S.ph==='mist'){S.t-=dt;S.mn-=dt;
-        if(S.mn<=0){S.mn=e.rage?.1:.14;sShot();const a=rnd(0,TAU);
+        if(S.mn<=0){S.mn=e.rage?.16:.21;sShot();const a=rnd(0,TAU);
           for(let i=0;i<3;i++)efire(e.x,e.y-8,Math.cos(a+i*2.1)*155,Math.sin(a+i*2.1)*155,'venom',7,4.5,Math.round(e.dmg*.7));}
         if(S.t<=0){S.ph='idle';S.t=e.rage?.5:.9;}}
       else if(S.ph==='dropW'){S.t-=dt;if(S.t<=0){S.ph='idle';S.t=e.rage?.6:1;}}
@@ -1738,7 +1740,7 @@ function gainXP(v){
   player.xp+=v;
   while(player.xp>=player.xpNext&&player.level<LV_MAX){
     player.xp-=player.xpNext;player.level++;
-    player.xpNext=Math.floor((5+player.level*2.6+player.level*player.level*.16)*1.12); // 잡몹전 ~95초 페이스 (젬 자동흡수 후 재조정)
+    player.xpNext=Math.floor((5+player.level*2.6+player.level*player.level*.16)*.98); // 잡몹전 ~85초 페이스 (몹 수 감소 보정)
     pendingLv++;}
   if(player.level>=LV_MAX)player.xp=0;
   if(pendingLv>0&&state==='playing'&&levelDelay<=0){
@@ -1832,8 +1834,8 @@ function update(dt){
     // golem rock: split into shards when it hits the arena wall
     if(b.split&&outOfArena(b.x,b.y,8)){ebullets.splice(i,1);
       sThud();shake=Math.max(shake,3);puff(b.x,b.y,4);clampArena(b,8);
-      for(let k=0;k<4;k++){const a=k/4*TAU+rnd(-.3,.3);
-        efire(b.x,b.y,Math.cos(a)*220,Math.sin(a)*220,'rock',8,3,Math.round(b.dmg*.6));}
+      for(let k=0;k<3;k++){const a=k/3*TAU+rnd(-.3,.3);
+        efire(b.x,b.y,Math.cos(a)*220,Math.sin(a)*220,'rock',10,3,Math.round(b.dmg*.6));}
       continue;}
     if(player.iT<=0&&dist2(b.x,b.y,player.x,player.y)<(b.r+player.r)*(b.r+player.r)){
       ebullets.splice(i,1);
@@ -2035,8 +2037,8 @@ function drawObstacle(ob){
     ctx.arcTo(bx,by+bh,bx,by,rad);ctx.arcTo(bx,by,bx+bw,by,rad);ctx.closePath();}}
 function drawEb(b){ // hostile bullet — readable core, NO red ring (빨강은 착탄지점 같은 위험타일 전용)
   // soft dark drop-halo just for contrast against bright maps (not a danger marker)
-  ctx.globalAlpha=.2;ctx.fillStyle='#241c2c';
-  ctx.beginPath();ctx.arc(b.x,b.y+1.5,b.r+3,0,TAU);ctx.fill();
+  ctx.globalAlpha=.3;ctx.fillStyle='#241c2c';
+  ctx.beginPath();ctx.arc(b.x,b.y+2,b.r+5,0,TAU);ctx.fill();
   ctx.globalAlpha=1;
   ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.rot);
   if(b.spr==='thorn'){ctx.fillStyle='#5a4632';
@@ -2213,25 +2215,25 @@ function draw(){
     for(const g of w.pos){ctx.globalAlpha=.55+.15*Math.sin(performance.now()/300+g.x);
       drawStk(STK.ghostFam,g.x,g.y,Math.sin(performance.now()/500+g.y)*.15,(w.sp.king?1.6:1)*(1+(w.size-1)*.5),false);}
     ctx.globalAlpha=1;}
-  // bullets (player) — streak + glow that grows with weapon power
+  // bullets (player) — 크고 또렷하게: 굵은 트레일 + 상시 글로우 + 1.3배 스프라이트
   for(const b of bullets){
     const gl=b.glow||0;
     // power trail
-    const tl=.035+gl*.014;
-    ctx.globalAlpha=.35;ctx.strokeStyle=gl>=2?(b.gcol||'#fff'):'#fff';ctx.lineWidth=3+gl*.6;
+    const tl=.045+gl*.016;
+    ctx.globalAlpha=.45;ctx.strokeStyle=gl>=2?(b.gcol||'#fff'):'#fff';ctx.lineWidth=4.5+gl*.8;
     ctx.beginPath();ctx.moveTo(b.x-b.vx*tl,b.y-b.vy*tl);ctx.lineTo(b.x,b.y);ctx.stroke();
-    // glow halo (pulses), only when upgraded
-    if(gl>=2){const pr=(b.r||7)*(b.scale||1)+6+gl*1.4;
-      ctx.globalAlpha=.18+.1*Math.sin(performance.now()/120+b.x);
+    // glow halo — 기본부터 켜져서 어디 있는지 항상 보인다 (강화될수록 커짐)
+    {const pr=(b.r||7)*(b.scale||1)+9+gl*1.8;
+      ctx.globalAlpha=.16+Math.min(gl,5)*.022+.08*Math.sin(performance.now()/120+b.x);
       ctx.fillStyle=b.gcol||'#ffd23e';ctx.beginPath();ctx.arc(b.x,b.y,pr,0,TAU);ctx.fill();}
     ctx.globalAlpha=1;
-    if(b.spr==='rapid'){ctx.fillStyle='#fffbe0';ctx.strokeStyle=OUT;ctx.lineWidth=2;
+    if(b.spr==='rapid'){ctx.fillStyle='#fffbe0';ctx.strokeStyle=OUT;ctx.lineWidth=2.4;
       ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.rot);
-      ctx.beginPath();ctx.ellipse(0,0,7,3.5,0,0,TAU);ctx.fill();ctx.stroke();ctx.restore();}
+      ctx.beginPath();ctx.ellipse(0,0,9.5,4.6,0,0,TAU);ctx.fill();ctx.stroke();ctx.restore();}
     else if(b.spr==='laser'){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.rot);
-      ctx.fillStyle=b.gcol||'#ff4f6a';ctx.beginPath();ctx.ellipse(0,0,(b.r||5)*2.4,(b.r||5)*.7,0,0,TAU);ctx.fill();
-      ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(0,0,(b.r||5)*1.6,(b.r||5)*.3,0,0,TAU);ctx.fill();ctx.restore();}
-    else drawStk(STK[b.spr],b.x,b.y,b.rot,(b.scale||1)*(1+Math.min(gl,6)*.04));
+      ctx.fillStyle=b.gcol||'#ff4f6a';ctx.beginPath();ctx.ellipse(0,0,(b.r||5)*2.8,(b.r||5)*.85,0,0,TAU);ctx.fill();
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(0,0,(b.r||5)*1.9,(b.r||5)*.4,0,0,TAU);ctx.fill();ctx.restore();}
+    else drawStk(STK[b.spr],b.x,b.y,b.rot,(b.scale||1)*1.3*(1+Math.min(gl,6)*.04));
     // sparkle orbiters on very high power
     if(gl>=5){const a=performance.now()/90+b.x;
       ctx.fillStyle='#fff';ctx.globalAlpha=.8;
