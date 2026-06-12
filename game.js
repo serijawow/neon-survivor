@@ -1,5 +1,5 @@
 'use strict';
-const GAME_VER='v5-hackslash'; // 목숨제·핵앤슬래시 템포·거대 보스 — 배포 확인 마커
+const GAME_VER='v5.1-space-boss'; // 공간압박 보스 페이즈(압축/회전빔/파문/분할) + 보스 패턴 개선 — 배포 확인 마커
 // ================= canvas =================
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,zoom=1;
@@ -553,7 +553,7 @@ function resetRun(){
   cam={x:0,y:0};shake=0;freezeT=0;slowT=0;flashR=0;flashW=0;spawnT=.5;
   pendingLv=0;levelDelay=0;walkT=0;tutT=4;gemStreak=0;
   bossOn=false;bossDone=false;eliteDone=false;midDone=false;midOn=false;midLoot=0;frzT=0;skillCd=0;echoQ=[];
-  surged=[];hitStop=0;clones=[];holeT=0;window.__e2=false;genObstacles();}
+  surged=[];hitStop=0;clones=[];holeT=0;press=[];window.__e2=false;genObstacles();}
 function recompute(){
   player.speed=player.baseSpeed*(1+player.pass.spd);
   player.magnet=95*(1+SV.up.mag*.18)*(1+player.pass.mag);
@@ -875,7 +875,7 @@ function useSkill(){
       e.x=player.x+Math.cos(a)*110;e.y=player.y+Math.sin(a)*110;}
     for(const g of gems)g.vac=1;for(const g of coinDrops)g.vac=1;for(const g of drops)g.vac=1;
     holeT=.45;}}
-let holeT=0,clones=[];
+let holeT=0,clones=[],press=[]; // press = 보스 공간압박 패턴(압축/회전빔/파문/반쪽분할)
 // ================= weapons fire =================
 function newWeapon(key){player.weapons[key]={dmg:1,rate:1,n:0,size:1,pierce:0,sp:{},t:0,pow:0,lvl:0,evo:null};}
 // defensive / utility cards (not weapons)
@@ -1093,9 +1093,10 @@ function bossRageFlourish(e){
       fxs.push({kind:'nova',x:e.x,y:e.y,r:18,max:212,t:0,col:'#d8a76a'});
       addZone(e.x,e.y,182,.7,0,e.dmg);
       for(let i=0;i<10;i++){const a=i/10*TAU;efire(e.x,e.y,Math.cos(a)*150,Math.sin(a)*150,'thorn',7,4,e.dmg);}break;
-    case 'topgun': // 비둘기: 나선 탄막 폭주 (이중 링)
+    case 'topgun': // 비둘기: 나선 탄막 폭주 (이중 링) + 추적 다트 2발
       for(let r=0;r<2;r++)for(let i=0;i<10;i++){const a=i/10*TAU+r*.31;
-        efire(e.x,e.y,Math.cos(a)*(150+r*30),Math.sin(a)*(150+r*30),'dart',7,4,11);}break;
+        efire(e.x,e.y,Math.cos(a)*(150+r*30),Math.sin(a)*(150+r*30),'dart',7,4,11);}
+      for(const off of[-.5,.5])efire(e.x,e.y,Math.cos(ba+off)*170,Math.sin(ba+off)*170,'dart',8,5.5,11,{homing:1.1});break;
     case 'toad': // 두꺼비: 독무 분출 — 둘레에 독 웅덩이
       for(let i=0;i<6;i++)addZone(e.x+Math.cos(i/6*TAU)*120,e.y+Math.sin(i/6*TAU)*120,84,.7,2,13);
       floater(e.x,e.y-e.r-12,'독무 분출!','#7fae3e',true);break;
@@ -1117,13 +1118,99 @@ function bossRageFlourish(e){
       fxs.push({kind:'nova',x:e.x,y:e.y,r:20,max:190,t:0,col:'#c89a6a'});
       addZone(e.x,e.y,186,.7,0,e.dmg);
       for(let i=-2;i<=2;i++)efire(e.x,e.y,Math.cos(ba+i*.22)*250,Math.sin(ba+i*.22)*250,'bone',10,2.6,12,{boom:.85});break;
-    case 'mage': // 대마법사: 이중 마법진 + 운석 세례
+    case 'mage': // 대마법사: 이중 마법진 + 운석 세례 + 추적 오브
       for(let i=0;i<16;i++){const a=i/16*TAU;efire(e.x,e.y,Math.cos(a)*150,Math.sin(a)*150,'orb',7,6,12);}
-      for(let i=0;i<4;i++)addZone(player.x+rnd(-150,150),player.y+rnd(-150,150),66,.85,0,13);break;
+      for(let i=0;i<4;i++)addZone(player.x+rnd(-150,150),player.y+rnd(-150,150),66,.85,0,13);
+      for(const off of[-.6,.6])efire(e.x,e.y,Math.cos(ba+off)*140,Math.sin(ba+off)*140,'orb',8,6,12,{homing:.9});break;
     default: // 그 외: 보스 색에 맞춘 탄막 링
       for(let i=0;i<12;i++){const a=i/12*TAU;efire(e.x,e.y,Math.cos(a)*160,Math.sin(a)*160,'orb',8,4.5,e.dmg);}
   }
 }
+// ================= 공간압박 패턴 (보스 페이즈) =================
+// "패턴 게임이 아니라 공간 게임" — 단순 공격을 겹쳐 살아남을 공간을 줄인다.
+// kinds: shrink(외곽→중심 압축) / sweep(회전 빔) / rings(중심→외곽 파문) / half(반쪽 분할)
+function pressKit(e,phase){ // phase 2 = 발동(50%), phase 3 = 강화(25%)
+  const s=ST.shape,aR=s.k==='rect'?Math.min(s.w,s.h)/2:s.R;
+  const find=k=>press.find(q=>q.src===e&&q.kind===k);
+  switch(e.beh){
+    case 'boar': // 멧돼지: "내 구역이다!" — 바깥부터 흙먼지 장막이 조여온다
+      if(phase===2)press.push({kind:'shrink',src:e,cx:0,cy:0,r:aR*1.04,rMin:aR*.6,rate:aR*.44/16,t:0});
+      else{const p=find('shrink');if(p){p.rMin=aR*.46;p.rate*=1.7;}}
+      break;
+    case 'topgun': // 비둘기: 기총소사 — 천천히 도는 사격 레인
+      if(phase===2)press.push({kind:'sweep',src:e,n:1,ang:rnd(0,TAU),spd:.5,len:740,wd:46,warmup:1.3,t:0});
+      else{const p=find('sweep');if(p){p.n=2;p.spd=.62;}}
+      break;
+    case 'toad': case 'frogq': // 두꺼비/슬라임퀸: 독·점액 파문이 퍼져나간다
+      if(phase===2)press.push({kind:'rings',src:e,r0:e.r*e.scale+10,rMax:620,spd:150,band:34,every:2.7,cd:1.2,waves:[],t:0});
+      else{const p=find('rings');if(p){p.every=2.0;p.spd=172;}}
+      break;
+    case 'flyB': // 파리형님: 느린 점액 파문 (듀오전이라 가볍게)
+      if(phase===2&&!e.mid)press.push({kind:'rings',src:e,r0:e.r*e.scale+10,rMax:520,spd:130,band:30,every:3.4,cd:1.5,waves:[],t:0});
+      else{const p=find('rings');if(p)p.every=2.7;}
+      break;
+    case 'dogB': // 불독: 포효가 오솔길 반쪽을 울린다 — 위/아래 강제 이동
+      if(phase===2)press.push({kind:'half',src:e,axis:'y',side:1,st:'warn',pt:0,warn:1.15,on:1.4,off:1.3,t:0});
+      else{const p=find('half');if(p){p.on=1.8;p.off=1.0;}}
+      break;
+    case 'mage': // 대마법사: 회전 마법진 빔 2가닥
+      if(phase===2)press.push({kind:'sweep',src:e,n:2,ang:rnd(0,TAU),spd:.42,len:700,wd:40,warmup:1.3,t:0});
+      else{const p=find('sweep');if(p){p.spd=.56;}}
+      break;
+  }
+}
+function updatePress(dt){
+  for(let i=press.length-1;i>=0;i--){const p=press[i];
+    if(!p.src||p.src.hp<=0||!enemies.includes(p.src)){press.splice(i,1);continue;}
+    p.t+=dt;
+    if(p.kind==='shrink'){p.r=Math.max(p.rMin,p.r-p.rate*dt);
+      if(player.iT<=0&&dist2(player.x,player.y,p.cx,p.cy)>p.r*p.r)hurtPlayer(9);}
+    else if(p.kind==='sweep'){p.ang+=p.spd*dt;
+      if(p.t>p.warmup&&player.iT<=0)for(let k=0;k<p.n;k++){const a=p.ang+k/p.n*TAU,
+        x2=p.src.x+Math.cos(a)*p.len,y2=p.src.y+Math.sin(a)*p.len;
+        if(distSeg(player.x,player.y,p.src.x,p.src.y,x2,y2)<p.wd/2){hurtPlayer(9);break;}}}
+    else if(p.kind==='rings'){p.cd-=dt;
+      if(p.cd<=0){p.cd=p.every;p.waves.push({r:p.r0});sShot();}
+      for(let j=p.waves.length-1;j>=0;j--){const w2=p.waves[j];w2.r+=p.spd*dt;
+        if(w2.r>p.rMax){p.waves.splice(j,1);continue;}
+        if(player.iT<=0&&Math.abs(Math.sqrt(dist2(player.x,player.y,p.src.x,p.src.y))-w2.r)<p.band/2)hurtPlayer(9);}}
+    else if(p.kind==='half'){p.pt+=dt;
+      if(p.st==='warn'&&p.pt>=p.warn){p.st='on';p.pt=0;sThud();shake=Math.max(shake,5);}
+      else if(p.st==='on'&&p.pt>=p.on){p.st='off';p.pt=0;}
+      else if(p.st==='off'&&p.pt>=p.off){p.st='warn';p.pt=0;p.side*=-1;sWarn();}
+      if(p.st==='on'&&player.iT<=0&&(p.axis==='y'?player.y*p.side>0:player.x*p.side>0))hurtPlayer(9);}}}
+function drawPress(){
+  for(const p of press){
+    if(p.kind==='shrink'){const A=4200;
+      ctx.save();ctx.beginPath();ctx.rect(p.cx-A,p.cy-A,A*2,A*2);
+      ctx.arc(p.cx,p.cy,p.r,0,TAU,true);
+      ctx.fillStyle='rgba(255,64,64,.13)';ctx.fill('evenodd');ctx.restore();
+      ctx.strokeStyle='rgba(255,84,94,.8)';ctx.lineWidth=4;
+      ctx.beginPath();ctx.arc(p.cx,p.cy,p.r,0,TAU);ctx.stroke();}
+    else if(p.kind==='sweep'){const warm=p.t<p.warmup,al=warm?.08+.1*(p.t/p.warmup):.28;
+      for(let k=0;k<p.n;k++){const a=p.ang+k/p.n*TAU;
+        ctx.save();ctx.translate(p.src.x,p.src.y);ctx.rotate(a);
+        const g=ctx.createLinearGradient(0,-p.wd/2,0,p.wd/2);
+        g.addColorStop(0,'rgba(255,64,64,0)');g.addColorStop(.5,`rgba(255,64,64,${al})`);g.addColorStop(1,'rgba(255,64,64,0)');
+        ctx.fillStyle=g;ctx.fillRect(0,-p.wd/2,p.len,p.wd);
+        if(!warm){ctx.fillStyle='rgba(255,255,255,.45)';ctx.fillRect(0,-1.5,p.len,3);}
+        ctx.restore();}}
+    else if(p.kind==='rings'){for(const w2 of p.waves){
+      ctx.globalAlpha=.18;ctx.strokeStyle='#ff4040';ctx.lineWidth=p.band;
+      ctx.beginPath();ctx.arc(p.src.x,p.src.y,w2.r,0,TAU);ctx.stroke();
+      ctx.globalAlpha=.7;ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(p.src.x,p.src.y,w2.r+p.band/2,0,TAU);ctx.stroke();
+      ctx.globalAlpha=1;}}
+    else if(p.kind==='half'){const s=ST.shape,hw=(s.k==='rect'?s.w/2:s.R)+70,hh=(s.k==='rect'?s.h/2:s.R)+70;
+      const al=p.st==='on'?.2:p.st==='warn'?.08+.06*Math.sin(performance.now()/90):0;
+      if(al>0){ctx.fillStyle=`rgba(255,64,64,${al})`;
+        if(p.axis==='y')ctx.fillRect(-hw,p.side<0?-hh:0,hw*2,hh);
+        else ctx.fillRect(p.side<0?-hw:0,-hh,hw,hh*2);
+        if(p.st==='on'){ctx.strokeStyle='rgba(255,84,94,.85)';ctx.lineWidth=4;
+          ctx.beginPath();
+          if(p.axis==='y'){ctx.moveTo(-hw,0);ctx.lineTo(hw,0);}
+          else{ctx.moveTo(0,-hh);ctx.lineTo(0,hh);}
+          ctx.stroke();}}}}}
 // ================= enemy AI =================
 function updateEnemy(e,dt){
   if(frzT>0){e.flash*=Math.pow(.001,dt);
@@ -1138,7 +1225,8 @@ function updateEnemy(e,dt){
   // 추가 페이즈: 75%/25%에서 보스 고유 일격 변형 발동 (메인 보스만 — 패턴 밀도 ↑)
   if(e.boss&&!e.mid){
     if(!S.f75&&e.hp<e.maxhp*.75){S.f75=1;sWarn();shake=Math.max(shake,7);flashR=.3;bossRageFlourish(e);}
-    if(!S.f25&&e.hp<e.maxhp*.25){S.f25=1;sWarn();shake=Math.max(shake,8);flashR=.35;bossRageFlourish(e);}}
+    if(!S.f25&&e.hp<e.maxhp*.25){S.f25=1;sWarn();shake=Math.max(shake,8);flashR=.35;bossRageFlourish(e);
+      pressKit(e,3);}} // 25%: 공간압박 강화
   // ===== boss PHASE 2: rage at 50% HP — bigger, redder, faster, extra attacks =====
   if(e.boss&&!S.rage&&e.hp<e.maxhp*.5){S.rage=true;e.rage=1;
     e.scale*=1.16;e.dmg=Math.round(e.dmg*1.25);  // 분노: 덩치만 커지고 이동속도는 그대로(패턴만 강화)
@@ -1147,7 +1235,8 @@ function updateEnemy(e,dt){
     fxs.push({kind:'nova',x:e.x,y:e.y,r:18,max:200,t:0,col:'#ff3860'});
     puff(e.x,e.y,10);
     // 분노 일격 — 보스 고유 패턴을 강화한 변형 (단순 빨간사각형/잡몹소환 대신)
-    bossRageFlourish(e);}
+    bossRageFlourish(e);
+    if(!e.mid)pressKit(e,2);} // 50%: 공간압박 패턴 발동 (중간보스는 단일패턴 유지)
   if(e.rage){e.rageGlow=(e.rageGlow||0)+dt;
     if(Math.random()<dt*4&&parts.length<460)parts.push({x:e.x+rnd(-e.r,e.r),y:e.y-e.r,vx:rnd(-.6,.6),vy:-rnd(.6,1.6),life:.6,col:'#ff5a5a',sz:rnd(4,7),puff:1});}
   switch(e.beh){
@@ -1225,7 +1314,8 @@ function updateEnemy(e,dt){
       if(!S.ph){S.ph='stalk';S.t=1.4;S.n=0;}
       if(S.ph==='stalk'){S.t-=dt;e.x+=dx/d*e.sp*dt;e.y+=dy/d*e.sp*dt;
         if(S.t<=0){S.n++;
-          if(S.n%3===0){S.ph='stompW';S.t=.75;addZone(e.x,e.y,150,.75,0,16);sWarn();}
+          // 1페이즈(80%↑)는 돌진만 — 읽히는 단계. 발구르기는 80% 밑부터 섞인다
+          if(S.n%3===0&&e.hp<e.maxhp*.8){S.ph='stompW';S.t=.75;addZone(e.x,e.y,150,.75,0,16);sWarn();}
           else{S.ph='aim';S.t=.7;S.ang=Math.atan2(dy,dx);
             addBeam(e.x,e.y,S.ang,560,72,.7,0);}}}
       else if(S.ph==='aim'){S.t-=dt;
@@ -1233,7 +1323,7 @@ function updateEnemy(e,dt){
       else if(S.ph==='charge'){S.t-=dt;
         e.x+=Math.cos(S.ang)*560*dt;e.y+=Math.sin(S.ang)*560*dt;
         if(parts.length<460)parts.push({x:e.x+rnd(-10,10),y:e.y+rnd(-10,10),vx:0,vy:0,life:.4,col:'#d8cfc2',sz:7,puff:1});
-        if(S.t<=0){S.ph='dizzy';S.t=1.6;sThud();shake=Math.max(shake,8);}}
+        if(S.t<=0){S.ph='dizzy';S.t=S.rage?1.3:1.9;sThud();shake=Math.max(shake,8);}} // 반격창: 1페이즈 길게(학습), 분노 시 짧게
       else if(S.ph==='stompW'){S.t-=dt;
         if(S.t<=0){S.ph='stalk';S.t=1.2;sThud();shake=Math.max(shake,9);
           if(e.hp<e.maxhp*.55)for(let k=0;k<2;k++)spawnEnemy('mouse',e.x+rnd(-50,50),e.y+rnd(-50,50));}}
@@ -1248,9 +1338,9 @@ function updateEnemy(e,dt){
         e.x+=(tx-e.x)*Math.min(1,dt*4);e.y+=(ty-e.y)*Math.min(1,dt*4);
         S.volley-=dt;
         if(S.volley<=0){S.vt++;
-          if(S.vt%2){S.volley=3.6;sShot();
+          if(S.vt%2||!S.rage){S.volley=3.6;sShot(); // 1페이즈 = 링+돌진만(학습) — 나선은 2페이즈부터
             for(let i=0;i<10;i++){const a=i/10*TAU;
-              efire(e.x,e.y,Math.cos(a)*155,Math.sin(a)*155,'dart',7,4,10);}}
+              efire(e.x,e.y,Math.cos(a)*140,Math.sin(a)*140,'dart',7,4,10);}}
           else{S.volley=3.6;S.spiral=12;S.spT=0;S.spA=Math.atan2(dy,dx);}}
         if(S.spiral>0){S.spT-=dt;
           if(S.spT<=0){S.spT=.06;S.spiral--;S.spA+=.5;
@@ -1292,7 +1382,11 @@ function updateEnemy(e,dt){
           const x2=e.x+Math.cos(S.ta)*380,y2=e.y+Math.sin(S.ta)*380;
           fxs.push({kind:'tongue',x1:e.x,y1:e.y,x2,y2,t:0});
           if(player.iT<=0&&distSeg(player.x,player.y,e.x,e.y,x2,y2)<34)hurtPlayer(15);
-          S.ph='hop';S.t=.9;}}
+          // 분노: 옮긴 자리로 혀가 한 번 더 따라온다 (겹치는 패턴)
+          if(S.rage&&!S.t2){S.t2=1;S.ph='tongueW';S.t=.5;
+            S.ta=Math.atan2(player.y-e.y,player.x-e.x);
+            addBeam(e.x,e.y,S.ta,380,56,.5,0);sWarn();}
+          else{S.t2=0;S.ph='hop';S.t=.9;}}}
       break;
     case 'flyB':{
       const want=290,m=(d-want)/Math.abs(d-want||1);
@@ -1339,9 +1433,10 @@ function updateEnemy(e,dt){
       S.spinT-=dt;
       if(S.spinT<=0){S.spinT=10;S.spinD=2;}
       if(S.spinD>0){S.spinD-=dt;S.orbR=oR+Math.sin((2-S.spinD)*Math.PI)*52;S.orb+=dt*3;}}
-      for(let i=0;i<3;i++){const a=S.orb+i/3*TAU,
+      {const nL=S.rage?4:3; // 분노: 뚜껑 4개 — 회전 압박 강화
+      for(let i=0;i<nL;i++){const a=S.orb+i/nL*TAU,
         tx=e.x+Math.cos(a)*S.orbR,ty=e.y+Math.sin(a)*S.orbR;
-        if(player.iT<=0&&dist2(tx,ty,player.x,player.y)<(17+player.r)*(17+player.r))hurtPlayer(13);}
+        if(player.iT<=0&&dist2(tx,ty,player.x,player.y)<(17+player.r)*(17+player.r))hurtPlayer(13);}}
       S.lob=(S.lob===undefined?3:S.lob)-dt;
       if(S.lob<=0){S.lob=6;sWarn();
         for(let i=0;i<3;i++)addZone(player.x+rnd(-100,100),player.y+rnd(-100,100),76,1.05,0,14);}
@@ -1384,9 +1479,10 @@ function updateEnemy(e,dt){
       if(!S.ph){S.ph='stalk';S.t=1.6;}
       if(S.ph==='stalk'){S.t-=dt;e.x+=dx/d*e.sp*dt;e.y+=dy/d*e.sp*dt;
         if(S.t<=0){const r=Math.random();
+          // 1페이즈 = 돌진+포효(학습) — 뼈다귀 산탄은 2페이즈부터 섞인다
           if(r<.4){S.ph='tripleW';S.t=.6;S.cn=0;S.ang=Math.atan2(dy,dx);
             addBeam(e.x,e.y,S.ang,520,68,.6,0);sWarn();}
-          else if(r<.7){S.ph='barkW';S.t=.8;addZone(e.x,e.y,175,.8,0,15);sWarn();}
+          else if(r<.7||!S.rage){S.ph='barkW';S.t=.8;addZone(e.x,e.y,215,.8,0,15);sWarn();}
           else{S.ph='bone';S.t=.35;}}}
       else if(S.ph==='tripleW'){S.t-=dt;
         if(S.t<=0){S.ph='triple';S.t=.6;sJump();}}
@@ -1398,7 +1494,7 @@ function updateEnemy(e,dt){
           else{S.ph='stalk';S.t=1.6;}}}
       else if(S.ph==='barkW'){S.t-=dt;
         if(S.t<=0){sBig();shake=Math.max(shake,10);
-          fxs.push({kind:'nova',x:e.x,y:e.y,r:20,max:175,t:0,col:'#c89a6a'});
+          fxs.push({kind:'nova',x:e.x,y:e.y,r:20,max:215,t:0,col:'#c89a6a'});
           if(e.hp<e.maxhp*.6)for(let k=0;k<2;k++)spawnEnemy('mouse',e.x+rnd(-50,50),e.y+rnd(-50,50));
           S.ph='stalk';S.t=1.4;}}
       else{S.t-=dt;
@@ -1663,6 +1759,10 @@ function update(dt){
     b.life-=dt;b.rot+=b.spin*dt;
     if(b.boom!==undefined){b.boom-=dt;if(b.boom<=0){b.boom=99;b.vx*=-1;b.vy*=-1;}}
     if(b.life<=0){ebullets.splice(i,1);continue;}
+    if(b.homing){ // 추적탄: 천천히 휘어 따라온다 (속도 유지, 선회율 b.homing)
+      const d=Math.hypot(player.x-b.x,player.y-b.y)||1,sp=Math.hypot(b.vx,b.vy)||1;
+      b.vx+=((player.x-b.x)/d*sp-b.vx)*Math.min(1,dt*b.homing);
+      b.vy+=((player.y-b.y)/d*sp-b.vy)*Math.min(1,dt*b.homing);}
     b.x+=b.vx*dt;b.y+=b.vy*dt;
     // golem rock: split into shards when it hits the arena wall
     if(b.split&&outOfArena(b.x,b.y,8)){ebullets.splice(i,1);
@@ -1688,6 +1788,8 @@ function update(dt){
     else{z.burn-=dt;
       if(player.iT<=0&&dist2(z.x,z.y,player.x,player.y)<z.r*z.r)hurtPlayer(z.dmg);
       if(z.burn<=0)zones.splice(i,1);}}
+  // 공간압박 패턴 (보스 페이즈)
+  if(frzT<=0)updatePress(dt);
   // beams resolve
   for(const f of fxs)if(f.kind==='beam'&&!f.done){
     f.warn-=dt;
@@ -1910,6 +2012,8 @@ function draw(){
   drawArena();
   // map obstacles (under everything)
   for(const ob of obstacles)drawObstacle(ob);
+  // 공간압박 패턴 — 장판과 같은 '위험 타일' 문법(반투명 빨강)으로 그린다
+  drawPress();
   // zones — light tint + clean ring (warning), inner fill shows imminent hit. less red-overload.
   for(const z of zones){
     if(z.warn>0){const pr=clamp(1-z.warn/z.max,0,1);
@@ -1999,8 +2103,8 @@ function draw(){
     if(e.beh==='boar'&&e.st.ph==='dizzy'){
       ctx.font='20px Jua,sans-serif';ctx.textAlign='center';
       ctx.fillText('💫',e.x+Math.cos(e.wob*4)*14,yy-e.r-16);}
-    if(e.beh==='racc'){const o=e.st.orb||0,R=e.st.orbR||88;
-      for(let i=0;i<3;i++){const a=o+i/3*TAU,tx=e.x+Math.cos(a)*R,ty=yy+Math.sin(a)*R;
+    if(e.beh==='racc'){const o=e.st.orb||0,R=e.st.orbR||88,nL=e.st.rage?4:3;
+      for(let i=0;i<nL;i++){const a=o+i/nL*TAU,tx=e.x+Math.cos(a)*R,ty=yy+Math.sin(a)*R;
         ctx.fillStyle='rgba(255,50,50,.3)';
         ctx.beginPath();ctx.arc(tx,ty,20,0,TAU);ctx.fill();
         ctx.save();ctx.translate(tx,ty);ctx.rotate(a+1.2);
