@@ -13,11 +13,16 @@ function toon(size,fn){
   const og=o.getContext('2d');
   og.drawImage(t,0,0);og.globalCompositeOperation='source-in';
   og.fillStyle='#fff';og.fillRect(0,0,S,S);
+  // red silhouette — used to flush a sprite angry-red (boss rage) without a square tint
+  const rd=document.createElement('canvas');rd.width=rd.height=S;
+  const rg=rd.getContext('2d');
+  rg.drawImage(o,0,0);rg.globalCompositeOperation='source-in';
+  rg.fillStyle='#ff2b30';rg.fillRect(0,0,S,S);
   const f=document.createElement('canvas');f.width=f.height=S;
   const fg=f.getContext('2d');
   fg.shadowColor='rgba(40,40,20,.26)';fg.shadowBlur=4;fg.shadowOffsetY=2;
   fg.drawImage(t,0,0);
-  return {n:f,w:o,half:S/2};}
+  return {n:f,w:o,rd:rd,half:S/2};}
 function el(g,x,y,rx,ry,col,lw){g.beginPath();g.ellipse(x,y,rx,ry,0,0,TAU);
   if(col){g.fillStyle=col;g.fill();}
   if(lw){g.strokeStyle=OUT;g.lineWidth=lw;g.stroke();}}
