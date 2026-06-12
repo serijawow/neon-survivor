@@ -1,5 +1,5 @@
 'use strict';
-const GAME_VER='v5.2-grid-mobs'; // spatial grid 최적화 + 위험장판/유도(wisp)/방해(spider) 잡몹 + 폭발/분열 업글 — 배포 확인 마커
+const GAME_VER='v5.3-fun-pass'; // 봇 플레이테스트 기반: 보스HP 카이팅 기준, 보스전 트리클 스폰, 진화 보장, 피격 완화+탈출가속, 밀도 상향
 // ================= canvas =================
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,zoom=1;
@@ -534,9 +534,9 @@ let cam={x:0,y:0},shake=0,freezeT=0,slowT=0,flashR=0,flashW=0;
 let spawnT=0,pendingLv=0,levelDelay=0,fishAng=0,ghostAng=0,walkT=0,tutT=4;
 const PBSPD=1.4; // 내 투사체 기본 이동속도 배율 (발사빈도 아님)
 const BASE_LIVES=4; // 목숨제 — 시작 기본 목숨 (업글/카드로 증가). 피격 1회=목숨 1개
-// 보스전 ~1분 목표 HP 배율 — 시뮬 실측(밀착 DPS 472@s1, 6500@s8 강빌드)에 회피 가동률 ~60% 반영.
-// 후반은 빌드 파워가 기하급수라 스테이지 가중이 큼
-let BOSS_HP_MAIN=46,BOSS_HP_MID=6;
+// 보스전 ~1분 목표 HP 배율 — '진화 보장' 후 카이팅 봇 실측 DPS(~780)×50초 기준.
+// 중간보스는 ~10초 리듬 브레이크
+let BOSS_HP_MAIN=95,BOSS_HP_MID=3.4;
 let bossOn=false,bossDone=false,eliteDone=false,midDone=false,midOn=false,frzT=0,skillCd=0,cdT=0,lastCdN=0,echoQ=[];
 const LV_MAX=15,MID_LV=7,BOSS_LV=15; // midboss at Lv.7, final boss at Lv.15 (max)
 let midLoot=0; // pending count of luck-boosted level-ups (midboss reward)
@@ -559,7 +559,7 @@ function resetRun(){
   pendingLv=0;levelDelay=0;walkT=0;tutT=4;gemStreak=0;
   bossOn=false;bossDone=false;eliteDone=false;midDone=false;midOn=false;midLoot=0;frzT=0;skillCd=0;echoQ=[];
   surged=[];hitStop=0;clones=[];holeT=0;press=[];hazT=4;window.__e2=false;
-  player.snareT=0;grid.clear();gridUsed.length=0;genObstacles();}
+  player.snareT=0;player.burstT=0;grid.clear();gridUsed.length=0;genObstacles();}
 function recompute(){
   player.speed=player.baseSpeed*(1+player.pass.spd);
   player.magnet=95*(1+SV.up.mag*.18)*(1+player.pass.mag);
@@ -642,7 +642,9 @@ function spawnEnemy(type,ax,ay){
   if(x===undefined){const p=arenaSpot(300,600);x=p.x;y=p.y;}
   // bosses: much tankier so the fight lasts & you must survive the patterns.
   // mid-bosses get a smaller bump than full bosses.
-  const bossHp=d.boss?(d.mid?(BOSS_HP_MID+(stage-1)*2.2):(BOSS_HP_MAIN+(stage-1)*9)):0;
+  // 스테이지 가중 +52: 후반 빌드 파워는 기하급수(봇 실측 s1≈780 → s7≈7600 DPS).
+  // 약한 빌드는 소프트 인레이지가 바닥을 받쳐 45~120초 안에 수렴
+  const bossHp=d.boss?(d.mid?(BOSS_HP_MID+(stage-1)*.9):(BOSS_HP_MAIN+(stage-1)*38)):0;
   const e={type,stk:d.stk,x,y,r:d.r,hp:d.hp*(d.boss?bossHp:mobHpMul()),
     maxhp:0,sp:d.sp*(d.boss?1:mobSpMul()),xp:d.xp,dmg:d.dmg,coin:d.coin||0,beh:d.beh,boss:d.boss||null,mid:d.mid||false,
     flash:0,bIT:0,wob:rnd(0,TAU),kx:0,ky:0,st:{},vx:0,vy:0,meals:0,scale:1,face:1,stun:0,elite:false,sq:0};
@@ -698,7 +700,12 @@ function doSurge(){
       for(const[k,wt]of w.pool){r-=ewt(k,wt);if(r<=0){pick=k;break;}}
       spawnEnemy(pick,player.x+Math.cos(a)*R,player.y+Math.sin(a)*R);}},950);}
 function director(dt){
-  if(bossDone||bossOn)return;
+  if(bossDone)return;
+  if(bossOn){ // 보스전에도 잡몹이 얇게 흘러들어온다 — 학살 텍스처+젬 유지 (보스 집중은 유지되게 약하게)
+    spawnT-=dt;
+    if(spawnT<=0){spawnT=1.1;
+      if(enemies.length<56)spawnEnemy(pickMob(ST.waves[0].pool));}
+    return;}
   // ===== bosses gated by PLAYER LEVEL (clear time varies by build/skill → real ranking) =====
   if(player.level>=BOSS_LV){spawnBoss();return;}           // boss at Lv.15
   if(!midDone&&ST.mid&&player.level>=MID_LV){spawnMid();return;} // midboss at Lv.7
@@ -711,10 +718,11 @@ function director(dt){
   spawnT-=dt;
   if(spawnT<=0){const w=curWave();
     const ramp=player.level>=11?.62:player.level>=6?.78:1;
-    // ×0.62 — 핵앤슬래시 밀도: 잡몹이 1방에 죽는 만큼 더 쏟아져야 시원함 + 레벨 페이스 유지
-    spawnT=Math.max(.1,w.rate*ramp*.62*(0.78+0.22*Math.sin(gTime)));
+    // ×0.5 — 핵앤슬래시 밀도: 잡몹이 1방에 죽는 만큼 더 쏟아져야 시원함 + 레벨 페이스 유지
+    spawnT=Math.max(.14,w.rate*ramp*.5*(0.78+0.22*Math.sin(gTime)));
     const pick=pickMob(w.pool);
     spawnEnemy(pick);
+    if(player.level>=5&&Math.random()<.3)spawnEnemy(pickMob(w.pool));
     if(player.level>=9&&Math.random()<.55)spawnEnemy(pickMob(w.pool));
     if(player.level>=13&&Math.random()<.4)spawnEnemy(pickMob(w.pool));}
   // 위험 장판 — 스테이지3+ 평상시에도 가끔 발밑에 예고 후 생기는 타일. '가만히 못 서게' 만드는 보조 압박.
@@ -736,6 +744,9 @@ function pickMob(pool){
     let r=Math.random()*tot,pick=pool[0][0];
     for(const[k,wt]of pool){r-=ewt(k,wt);if(r<=0){pick=k;break;}}
     const beh=MOB[pick].beh;
+    if(RANGED_BEH[beh]){ // 원거리몹 화면 내 하드캡 — 전체 밀도가 올라도 탄막이 안 쌓이게
+      let rc=0;for(const e of enemies)if(!e.boss&&RANGED_BEH[e.beh])rc++;
+      if(rc>=3+(stage>>1)){continue;}return pick;}
     if(!SPECIAL_BEH[beh])return pick;
     // cap each special behavior to a small on-screen count
     let cnt=0;for(const e of enemies)if(!e.boss&&MOB[e.type]&&MOB[e.type].beh===beh)cnt++;
@@ -765,6 +776,10 @@ function damageEnemy(e,dmg,hx,hy){
   let mul=1;
   if(frzT>0)mul*=1.5;
   if(e.beh==='boar'&&e.st.ph==='dizzy')mul*=1.4;
+  // 소프트 인레이지 — 보스전 30초 후부터 받는 피해 +8%/초 누적(최대 +900%).
+  // 빌드별 단일표적 DPS 편차(10배+ 실측)에도 보스전이 45~140초 안에 무조건 수렴 (강빌드 무영향)
+  if(e.boss&&!e.mid&&e.fightT>25){mul*=1+Math.min(9,(e.fightT-25)*.09);
+    if(e.fightT>140)mul*=1+(e.fightT-140)*.45;} // 140초+ 피티: 최악 롤도 ~170초엔 무조건 끝
   const crit=Math.random()<.1,v=Math.max(1,Math.round(dmg*mul*(crit?2:1)));
   e.hp-=v;e.flash=1;e.sq=Math.min(1,(e.sq||0)+(crit?.9:.55));sHit();
   // hit spark + floating number (numbers scale-pop)
@@ -800,8 +815,8 @@ function killEnemy(e){
   for(let k=0;k<c;k++)if(coinDrops.length<50)coinDrops.push({x:e.x+rnd(-14,14),y:e.y+rnd(-14,14),t:0});
   if(e.elite){dropItem(e.x,e.y,SKILL_KEYS[(Math.random()*SKILL_KEYS.length)|0]);
     openChest();}
-  else if(!e.boss){const pity=player.lives<=2?2.2:1;
-    if(Math.random()<.02*pity)dropItem(e.x,e.y,'chicken');
+  else if(!e.boss){const pity=player.lives<=2?2.4:1;
+    if(Math.random()<.028*pity)dropItem(e.x,e.y,'chicken');
     else if(Math.random()<.006)dropItem(e.x,e.y,SKILL_KEYS[(Math.random()*SKILL_KEYS.length)|0]);}
   if(e.boss&&e.mid){ // midboss(es) down → resume jobmobs + a high-tier level-up
     if(!enemies.some(x=>x.mid)){midOn=false;
@@ -832,9 +847,9 @@ function hurtPlayer(dmg){
     floater(player.x,player.y-30,'회피!','#7ec8ff',true);tone(900,.08,'sine',.1,1400);
     for(let i=0;i<6;i++)parts.push({x:player.x,y:player.y,vx:rnd(-3,3),vy:rnd(-3,3),life:.4,col:'#7ec8ff',sz:4});
     return;}
-  // 목숨제 — 데미지 크기와 무관하게 피격 1회당 목숨 1개. 이후 0.9초 무적(깜빡임)으로 '한 대=하나' 보장.
+  // 목숨제 — 데미지 크기와 무관하게 피격 1회당 목숨 1개. 이후 1.15초 무적 + 잠깐 가속(탈출 찬스).
   const before=player.lives;
-  player.lives--;player.iT=.9;sHurt();shake=Math.min(14,9+(dmg||8)*.4);flashR=1;combo=0;lastMile=0;
+  player.lives--;player.iT=1.15;player.burstT=1.2;sHurt();shake=Math.min(14,9+(dmg||8)*.4);flashR=1;combo=0;lastMile=0;
   hitStop=Math.max(hitStop,.07);
   floater(player.x+rnd(-8,8),player.y-32,'-1 ♥','#ff3860',true);
   burst(player.x,player.y,['#ff5f3c','#fff'],16,9);
@@ -1249,6 +1264,7 @@ function updateEnemy(e,dt){
     return;}
   if(e.sq>0)e.sq=Math.max(0,e.sq-dt*5);
   if(e.stun>0){e.stun-=dt;e.flash=Math.max(e.flash,.3);return;}
+  if(e.boss&&!e.mid)e.fightT=(e.fightT||0)+dt; // 소프트 인레이지용 보스전 경과시간
   e.wob+=dt*3;e.bIT-=dt;e.flash*=Math.pow(.001,dt);
   const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy)||1;
   e.face=dx<0?-1:1;
@@ -1722,7 +1738,7 @@ function gainXP(v){
   player.xp+=v;
   while(player.xp>=player.xpNext&&player.level<LV_MAX){
     player.xp-=player.xpNext;player.level++;
-    player.xpNext=Math.floor((5+player.level*2.6+player.level*player.level*.16)*.82); // 빠른 레벨 페이스(잡몹전 1~2분 → 보스)
+    player.xpNext=Math.floor((5+player.level*2.6+player.level*player.level*.16)*1.12); // 잡몹전 ~95초 페이스 (젬 자동흡수 후 재조정)
     pendingLv++;}
   if(player.level>=LV_MAX)player.xp=0;
   if(pendingLv>0&&state==='playing'&&levelDelay<=0){
@@ -1738,12 +1754,12 @@ function update(dt){
   const ml=Math.hypot(mx,my);
   if(ml>0){mx/=ml;my/=ml;player.fx=mx;player.fy=my;
     if(Math.abs(mx)>.2)player.face=mx<0?-1:1;
-    const tm=(obstacles.length?terrainMul(player.x,player.y):1)*(player.snareT>0?.5:1); // 끈끈이(방해형)=이동 0.5배
+    const tm=(obstacles.length?terrainMul(player.x,player.y):1)*(player.snareT>0?.5:1)*(player.burstT>0?1.28:1); // 끈끈이=0.5배 / 피격 직후=1.28배 탈출가속
     if(tm<1&&Math.random()<dt*8)parts.push({x:player.x+rnd(-10,10),y:player.y+12,vx:rnd(-1,1),vy:-rnd(.5,1.5),life:.4,col:player.snareT>0?'#c9a0ff':'#e0c896',sz:rnd(3,6),puff:1});
     player.x+=mx*player.speed*tm*dt;player.y+=my*player.speed*tm*dt;walkT+=dt;}
   clampArena(player,player.r);
   if(obstacles.length)resolveObstacles(player,player.r);
-  player.iT-=dt;player.shieldT-=dt;frzT-=dt;skillCd-=dt;if(player.snareT>0)player.snareT-=dt;
+  player.iT-=dt;player.shieldT-=dt;frzT-=dt;skillCd-=dt;if(player.snareT>0)player.snareT-=dt;if(player.burstT>0)player.burstT-=dt;
   // dopamine buff timers
   for(const k in player.buffs){player.buffs[k]-=dt;if(player.buffs[k]<=0)delete player.buffs[k];}
   if(player.buffs.invinc)player.iT=Math.max(player.iT,.1);
@@ -1853,6 +1869,7 @@ function update(dt){
   // pickups
   const pull=(g,d,spd)=>{g.x+=(player.x-g.x)/d*spd*dt;g.y+=(player.y-g.y)/d*spd*dt;};
   for(let i=gems.length-1;i>=0;i--){const g=gems[i];g.t+=dt;
+    if(g.t>9)g.vac=1; // 난전 중 못 주운 젬은 알아서 날아온다 — 학살 도중 XP 굶주림 방지
     const d=Math.sqrt(dist2(g.x,g.y,player.x,player.y));
     if(g.vac)pull(g,d,950);
     else if(d<player.magnet)pull(g,d,(1-d/player.magnet)*600+150);
@@ -2592,6 +2609,13 @@ function showLevelup(){
       if(p&&!used.has(idOf(p))){used.add(idOf(p));break;}}
     if(p)picks.push(p);}
   if(!picks.length){state='playing';return;}
+  // 진화 보장 — 무기가 진화 조건(lvl5)을 채웠는데 진화 카드가 안 떴으면 1번 슬롯을 진화로 교체.
+  // "게임이 바뀌는 순간"이 운빨이 아니라 매 런 반드시 온다 (뱀서 재미의 심장)
+  if(!picks.some(p=>p.kind==='evo')){
+    const elig=[];for(const k in player.weapons){const w=player.weapons[k];
+      if(w.lvl>=5&&!w.evo&&EVOS[k])elig.push(k);}
+    if(elig.length){const k=elig[(Math.random()*elig.length)|0],evs=EVOS[k];
+      picks[0]={kind:'evo',key:k,ev:evs[(Math.random()*evs.length)|0],tier:'SS',disp:'SSS'};}}
   picks.forEach((p,i)=>{
     const el=document.createElement('div');
     el.className='card '+(p.kind==='new'?'tnew':'t'+p.tier);
