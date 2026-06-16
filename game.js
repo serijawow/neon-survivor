@@ -1,5 +1,5 @@
 'use strict';
-const GAME_VER='v5.5-punchy'; // 무기별 탄수 상한(초과강화→위력 전환), SSS 도배 제거, 데미지숫자 정리, 민들레=밝은 홀씨탄
+const GAME_VER='v5.6-flow'; // 레벨상한22(보스후 성장)+곡선완화, 달인 XP+보스HP↓, 하악질 근접발동+넉백, 막보스 전리품 자동흡입, 고등어 크게
 // ================= canvas =================
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,zoom=1;
@@ -538,7 +538,7 @@ const BASE_LIVES=4; // 목숨제 — 시작 기본 목숨 (업글/카드로 증�
 // 중간보스는 ~10초 리듬 브레이크
 let BOSS_HP_MAIN=95,BOSS_HP_MID=3.4;
 let bossOn=false,bossDone=false,eliteDone=false,midDone=false,midOn=false,frzT=0,skillCd=0,cdT=0,lastCdN=0,echoQ=[];
-const LV_MAX=15,MID_LV=7,BOSS_LV=15; // midboss at Lv.7, final boss at Lv.15 (max)
+const LV_MAX=22,MID_LV=7,BOSS_LV=15; // 보스는 Lv15에 등장하지만 레벨은 22까지 — 보스전·이후에도 계속 성장(낭비된 XP 제거)
 let midLoot=0; // pending count of luck-boosted level-ups (midboss reward)
 let surged=[],hitStop=0,masterMode=false;
 let joy={on:false,id:-1,ax:0,ay:0,dx:0,dy:0};
@@ -559,7 +559,7 @@ function resetRun(){
   pendingLv=0;levelDelay=0;walkT=0;tutT=4;gemStreak=0;
   bossOn=false;bossDone=false;eliteDone=false;midDone=false;midOn=false;midLoot=0;frzT=0;skillCd=0;echoQ=[];
   surged=[];hitStop=0;clones=[];holeT=0;press=[];hazT=4;window.__e2=false;
-  player.snareT=0;player.burstT=0;grid.clear();gridUsed.length=0;genObstacles();}
+  player.snareT=0;player.burstT=0;winT=0;grid.clear();gridUsed.length=0;genObstacles();}
 function recompute(){
   player.speed=player.baseSpeed*(1+player.pass.spd);
   player.magnet=95*(1+SV.up.mag*.18)*(1+player.pass.mag);
@@ -652,7 +652,7 @@ function spawnEnemy(type,ax,ay){
   if(d.boss){e.bscale=d.mid?1.7:2.3;e.scale=e.bscale;}
   else{e.bscale=1.22;e.scale=1.22;} // 잡몹도 크고 또렷하게 (수는 줄임)
   if(masterMode){
-    if(e.boss){e.hp*=1.5;e.dmg=Math.round(e.dmg*1.2);}
+    if(e.boss){e.hp*=1.25;e.dmg=Math.round(e.dmg*1.2);} // 달인 보스HP 1.5→1.25 (잡몹 탱키+변이로 이미 어렵고 소프트인레이지가 끝 보장)
     else{e.hp*=1.7;e.dmg+=4;e.xp+=1;
       const m=Math.random();
       if(m<.3){e.sp*=1.3;e.mut='fast';}
@@ -826,7 +826,11 @@ function killEnemy(e){
       banner('⚔ 중간보스 격파! 좋은 카드 등장!','#ffd23e',1.8);sLevel();}}
   if(e.boss&&!e.mid){
     for(const o of enemies)if(o.boss&&!o.mid)o.st.rage=true;
-    if(!enemies.some(x=>x.boss&&!x.mid))stageCleared();}
+    if(!enemies.some(x=>x.boss&&!x.mid)){
+      // 막보스 처치 — 바닥 전리품 전부 자동 흡입 + 0.9초 승리 여유 후 클리어 (드롭 놓침 방지)
+      bossDone=true; // director 정지(트리클 멈춤). state는 'playing' 유지 → 픽업이 빨려온다
+      for(const g of gems)g.vac=1;for(const g of coinDrops)g.vac=1;for(const g of drops)g.vac=1;
+      winT=.9;slowT=Math.max(slowT,.55);}}
   const M={12:'연쇄냥!',25:'학살냥!!',50:'폭풍냥냥!!!',90:'전설의 발톱!!!'};
   if(M[combo]&&lastMile!==combo){lastMile=combo;banner(combo+'콤보 '+M[combo],'#ffd23e',1.1);
     freezeT=Math.max(freezeT,.04);sLevel();}}
@@ -921,7 +925,7 @@ function useSkill(){
       e.x=player.x+Math.cos(a)*110;e.y=player.y+Math.sin(a)*110;}
     for(const g of gems)g.vac=1;for(const g of coinDrops)g.vac=1;for(const g of drops)g.vac=1;
     holeT=.45;}}
-let holeT=0,clones=[],press=[],hazT=4; // press = 보스 공간압박 패턴 / hazT = 위험장판(이동 강제) 타이머
+let holeT=0,clones=[],press=[],hazT=4,winT=0; // press = 보스 공간압박 / hazT = 위험장판 / winT = 막보스 처치 후 승리 흡입 타이머
 // ================= weapons fire =================
 function newWeapon(key){player.weapons[key]={dmg:1,rate:1,n:0,size:1,pierce:0,sp:{},t:0,pow:0,lvl:0,evo:null};}
 // defensive / utility cards (not weapons)
@@ -1027,8 +1031,8 @@ function updateWeapons(dt){
       tone(460,.1,'triangle',.07,820);}}
   // ---------- 빙글 생선 ----------
   if(wp.fish){const w=wp.fish;fishAng+=dt*(5.2*w.rate)*rateB;
-    const want=(w.sp.whale?1:2+w.n),n=(w.sp.whale?1:Math.min(want,5)),R=(w.sp.whale?96:82)+8*Math.min(w.n,3); // 생선 상한 5
-    const fr=(w.sp.whale?40:24)*w.size,fk=want/n; // 초과 생선 → 한 마리 위력으로
+    const want=(w.sp.whale?1:2+w.n),n=(w.sp.whale?1:Math.min(want,5)),R=(w.sp.whale?96:88)+8*Math.min(w.n,3); // 생선 상한 5
+    const fr=(w.sp.whale?44:32)*w.size,fk=want/n; // 고등어 기본 크게 (판정 24→32) — 초과 생선은 위력으로
     for(let i=0;i<n;i++){const a=fishAng+i/n*TAU,
       bx=player.x+Math.cos(a)*R,by=player.y+Math.sin(a)*R;
       eachNear(bx,by,fr+2,e=>{if(e.bIT<=0&&dist2(bx,by,e.x,e.y)<(fr+e.r*e.scale)**2){
@@ -1066,9 +1070,14 @@ function updateWeapons(dt){
     if(w.sp.aura){w.t-=dt;if(w.t<=0){w.t=.3;const R=(95+30*w.size);
       let any=0;for(const e of enemies)if(dist2(player.x,player.y,e.x,e.y)<R*R){damageEnemy(e,WD('nova',w)*.4,player.x,player.y);any=1;}
       if(any&&Math.random()<.4)fxs.push({kind:'nova',x:player.x,y:player.y,r:R*.7,max:R,t:0,col:'#ff8ad8'});}}
-    else{w.t-=dt;if(w.t<=0){w.t=cd;fireNova(w,1);
-      if(w.sp.dbl)echoQ.push({x:player.x,y:player.y,t:.25,w,mul:1});
-      if(w.sp.echo){echoQ.push({x:player.x,y:player.y,t:.55,w,mul:1.2});echoQ.push({x:player.x,y:player.y,t:1.05,w,mul:1.5});}}}}
+    else{w.t-=dt;if(w.t<=0){
+      // 근접 발동 — 사거리 안에 적이 들어오면 즉시 하악(반응형 보호막). 없으면 짧게 대기.
+      const R=110*w.size;let near=false;
+      eachNear(player.x,player.y,R+96,e=>{if(!near&&dist2(player.x,player.y,e.x,e.y)<(R+e.r*e.scale*.7)**2)near=true;});
+      if(near){w.t=Math.max(.8,cd*.45);fireNova(w,1); // 쿨 대폭 단축(반응형) — 적 있을 때만이라 도배 안 됨
+        if(w.sp.dbl)echoQ.push({x:player.x,y:player.y,t:.25,w,mul:1});
+        if(w.sp.echo){echoQ.push({x:player.x,y:player.y,t:.55,w,mul:1.2});echoQ.push({x:player.x,y:player.y,t:1.05,w,mul:1.5});}}
+      else w.t=.12;}}}
   // ---------- 레이저 포인터: 삐비빅 조준 → 피융! 즉발 빔 ----------
   if(wp.laser){const w=wp.laser,cd=WDEF.laser.base.cd/w.rate*player.cdMul*cdScale;
     if(w.aim>0){ // aiming — track the locked target, then fire
@@ -1129,8 +1138,9 @@ function fireNova(w,mul){
   eachNear(player.x,player.y,R+96,e=>{const RR=R+e.r*e.scale*.7; // 대형 보스는 몸통까지 포함해 판정
     if(dist2(player.x,player.y,e.x,e.y)<RR*RR){
       damageEnemy(e,WDEF.nova.base.dmg*w.dmg*player.dmgMul,player.x,player.y);
-      if(w.sp.knock&&!e.boss){const d=Math.sqrt(dist2(player.x,player.y,e.x,e.y))||1;
-        e.kx+=(e.x-player.x)/d*240;e.ky+=(e.y-player.y)/d*240;}}});}
+      // 기본 약넉백 — '닿으면 밀쳐내는 보호막' 정체성. 밀어내기 카드(sp.knock)면 강하게.
+      if(!e.boss){const d=Math.sqrt(dist2(player.x,player.y,e.x,e.y))||1,kp=(w.sp.knock?240:120);
+        e.kx+=(e.x-player.x)/d*kp;e.ky+=(e.y-player.y)/d*kp;}}});}
 function nearTgt2(x,y,maxD){let best=null,bd=maxD*maxD;
   for(const e of enemies){const d=dist2(x,y,e.x,e.y);if(d<bd){bd=d;best=e;}}return best;}
 // 보스 분노 일격 — 단순 빨간사각형/잡몹소환 대신, 보스별 기존 패턴을 강화한 변형을 터뜨린다
@@ -1741,7 +1751,7 @@ function gainXP(v){
   player.xp+=v;
   while(player.xp>=player.xpNext&&player.level<LV_MAX){
     player.xp-=player.xpNext;player.level++;
-    player.xpNext=Math.floor((5+player.level*2.6+player.level*player.level*.16)*.98); // 잡몹전 ~85초 페이스 (몹 수 감소 보정)
+    player.xpNext=Math.floor((5+player.level*2.6+player.level*player.level*.16)*1.25); // 곡선 굵게 — 레벨업 빈도↓(흐름 유지), 보스 전 ~10회로
     pendingLv++;}
   if(player.level>=LV_MAX)player.xp=0;
   if(pendingLv>0&&state==='playing'&&levelDelay<=0){
@@ -1778,6 +1788,7 @@ function update(dt){
   else if(clones.length)clones=[];
   if(holeT>0){holeT-=dt;if(holeT<=0){explode(player.x,player.y,220,0);shake=14;flashW=.8;
     for(const e of enemies.slice())if(dist2(player.x,player.y,e.x,e.y)<260*260)damageEnemy(e,260,player.x,player.y);}}
+  if(winT>0){winT-=dt;if(winT<=0){winT=0;stageCleared();}} // 막보스 처치 후 전리품 흡입 끝 → 클리어
   // camera clamp to arena
   cam.x+=(player.x-cam.x)*Math.min(1,dt*5);
   cam.y+=(player.y-cam.y)*Math.min(1,dt*5);
@@ -1876,7 +1887,7 @@ function update(dt){
     const d=Math.sqrt(dist2(g.x,g.y,player.x,player.y));
     if(g.vac)pull(g,d,950);
     else if(d<player.magnet)pull(g,d,(1-d/player.magnet)*600+150);
-    if(d<24){gems.splice(i,1);sGem();gainXP(g.v);}}
+    if(d<24){gems.splice(i,1);sGem();gainXP(g.v*(masterMode?1.6:1));}} // 달인=XP +60%(탱키몹 느린킬 보정 + 곡선 굵어진 만큼 레벨 더 나게)
   for(let i=coinDrops.length-1;i>=0;i--){const g=coinDrops[i];g.t+=dt;
     const d=Math.sqrt(dist2(g.x,g.y,player.x,player.y));
     if(g.vac)pull(g,d,950);
@@ -2213,10 +2224,10 @@ function draw(){
     else if(e.meals>0){ctx.font='900 11px Jua,sans-serif';ctx.textAlign='center';
       ctx.fillStyle='#ffd23e';ctx.fillText('×'+e.meals+'냠',e.x,yy-e.r*sc-8);}}
   // fish orbit
-  if(player.weapons.fish){const w=player.weapons.fish,n=(w.sp.whale?1:Math.min(2+w.n,5)),R=(w.sp.whale?96:82)+8*Math.min(w.n,3);
+  if(player.weapons.fish){const w=player.weapons.fish,n=(w.sp.whale?1:Math.min(2+w.n,5)),R=(w.sp.whale?96:88)+8*Math.min(w.n,3);
     for(let i=0;i<n;i++){const a=fishAng+i/n*TAU;
       drawStk(w.sp.shark?STK.shark:STK.fish,player.x+Math.cos(a)*R,player.y+Math.sin(a)*R,
-        a+Math.PI/2,w.size*1.18,false);}}
+        a+Math.PI/2,w.size*1.55,false);}}
   // ghost familiars — float loosely (semi-transparent, bobbing) at their actual fire positions
   if(player.weapons.ghost&&player.weapons.ghost.pos){const w=player.weapons.ghost;
     for(const g of w.pos){ctx.globalAlpha=.55+.15*Math.sin(performance.now()/300+g.x);
