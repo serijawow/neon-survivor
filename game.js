@@ -1,5 +1,5 @@
 'use strict';
-const GAME_VER='v5.13-bosses'; // 모기 분노 지그재그, 보스킬 코인흡수, 말벌아저씨 신규패턴, 너구리 쓰레기통, 보스전 잡몹제거, 하악질 넉백/강화축
+const GAME_VER='v5.14-frogghost'; // 개구리 혓바닥=빨간직선경고, 분노=3연속 점프(파동삭제), 유령냥=관통 빙의(DoT)로 차별화
 // ================= canvas =================
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,zoom=1;
@@ -884,8 +884,8 @@ function efire(x,y,vx,vy,spr,r,life,dmg,o){
 function addZone(x,y,r,warn,burn,dmg){
   if(zones.length>26)return;
   zones.push({x,y,r,warn,burn:burn||0,dmg:dmg||10,max:warn});}
-function addBeam(x,y,ang,len,wd,warn,dmg){ // red telegraph lane → damage line
-  fxs.push({kind:'beam',x,y,ang,len,wd,t:0,warn,warn0:warn,dmg});}
+function addBeam(x,y,ang,len,wd,warn,dmg,line){ // red telegraph → damage line. line=1이면 화살표 없는 단순 빨간선(돌진 아님: 혓바닥 등)
+  fxs.push({kind:'beam',x,y,ang,len,wd,t:0,warn,warn0:warn,dmg,line:line||0});}
 function distSeg(px,py,x1,y1,x2,y2){
   const dx=x2-x1,dy=y2-y1,L2=dx*dx+dy*dy||1;
   let t=((px-x1)*dx+(py-y1)*dy)/L2;t=clamp(t,0,1);
@@ -1118,8 +1118,9 @@ function updateWeapons(dt){
       if(tgt){w.t=WDEF.ghost.base.cd/w.rate*player.cdMul*cdScale;
         for(let i=0;i<n;i++){const g=w.pos[i],a=Math.atan2(tgt.y-g.y,tgt.x-g.x);
           bullets.push({kind:'ghostb',x:g.x,y:g.y,vx:Math.cos(a)*300,vy:Math.sin(a)*300,
-            dmg:WD('ghost',w)*(w.sp.king?2.6:1)*gk,r:(w.sp.king?16:11)*w.size,life:2.2,pierce:w.sp.king?2:0,scale:1.35,
-            rot:a,spr:'ghostb',homing:1,tgt,glow:w.lvl,gcol:'#b8a8ff'});} // ALL bolts home — spooky tracking
+            dmg:WD('ghost',w)*(w.sp.king?2.4:.85)*gk,r:(w.sp.king?16:11)*w.size,life:2.4,pierce:w.sp.king?5:3,scale:1.35,
+            rot:a,spr:'ghostb',homing:1,tgt,glow:w.lvl,gcol:'#b8a8ff',
+            burnDmg:WD('ghost',w)*(w.sp.king?.8:.55),burnDur:2.6});} // 관통하며 '빙의(저주)' — 직접뎀은 낮고 지속 영혼불로 갉아먹음
         tone(540,.08,'sine',.05,820);}else w.t=.12;}}
   // turrets (yarn SS)
   for(let i=turrets.length-1;i>=0;i--){const tu=turrets[i];
@@ -1203,10 +1204,11 @@ function pressKit(e,phase){ // phase 2 = 발동(50%), phase 3 = 강화(25%)
       break;
     case 'topgun': // 비둘기: 레이저는 자체 행동(멈춤→예고→30° 지잉빔)으로 처리 — 분노 땐 행동에서 발동확률↑
       break;
-    case 'toad': case 'frogq': // 두꺼비/슬라임퀸: 독·점액 파문이 퍼져나간다
+    case 'toad': // 두꺼비: 독 파문(안전 틈 있음)
       if(phase===2)press.push({kind:'rings',src:e,r0:e.r*e.scale+10,rMax:620,spd:150,band:34,every:2.7,cd:1.2,waves:[],t:0});
       else{const p=find('rings');if(p){p.every=2.0;p.spd=172;}}
       break;
+    case 'frogq': break; // 슬라임퀸: 파동 삭제 — 분노 시 3연속 빠른 점프(행동에서 처리)
     case 'flyB': // 파리형님: 느린 점액 파문 (듀오전이라 가볍게)
       if(phase===2&&!e.mid)press.push({kind:'rings',src:e,r0:e.r*e.scale+10,rMax:520,spd:130,band:30,every:3.4,cd:1.5,waves:[],t:0});
       else{const p=find('rings');if(p)p.every=2.7;}
@@ -1288,6 +1290,10 @@ function updateEnemy(e,dt){
   if(e.sq>0)e.sq=Math.max(0,e.sq-dt*5);
   if(e.stun>0){e.stun-=dt;e.flash=Math.max(e.flash,.3);return;}
   if(e.boss&&!e.mid)e.fightT=(e.fightT||0)+dt; // 소프트 인레이지용 보스전 경과시간
+  if(e.burnT>0){e.burnT-=dt;e._bacc=(e._bacc||0)+e.burnDmg*dt; // 유령 빙의 — 지속 영혼불 DoT
+    if(e._bacc>=1){const v=e._bacc|0;e._bacc-=v;e.hp-=v;e.flash=Math.max(e.flash,.25);
+      if(Math.random()<dt*5)floater(e.x+rnd(-6,6),e.y-e.r*e.scale,'🔮','#b8a8ff',false);
+      if(e.hp<=0){killEnemy(e);return;}}}
   e.wob+=dt*3;e.bIT-=dt;e.flash*=Math.pow(.001,dt);
   // 분신 미끼: 잡몹은 미끼로 어그로(보스는 패턴 유지). 이동/조준이 전부 이 타겟을 따른다
   const ag=(decoy&&!e.boss)?decoy:player;
@@ -1469,17 +1475,20 @@ function updateEnemy(e,dt){
           if(S.hops%4===0){S.ph='tongueW';S.t=.65;
             S.tx=player.x;S.ty=player.y;
             const a=Math.atan2(S.ty-e.y,S.tx-e.x);
-            addBeam(e.x,e.y,a,380,56,.65,0);S.ta=a;sWarn();}
-          else if(S.hops%4===2){S.ph='bigjump';S.t=.95;S.tx=player.x;S.ty=player.y;
-            addZone(S.tx,S.ty,112,.95,0,17);sWarn();S.x0=e.x;S.y0=e.y;}
+            addBeam(e.x,e.y,a,380,18,.65,0,1);S.ta=a;sWarn();}  // 혓바닥 경고 = 빨간 직선(화살표 없음)
+          else if(S.hops%4===2){S.ph='bigjump';S.jd=S.rage?.5:.95;S.t=S.jd;S.tj=S.rage?2:0; // 분노: 3연속 빠른 점프
+            S.tx=player.x;S.ty=player.y;addZone(S.tx,S.ty,S.rage?102:112,S.jd,0,16);sWarn();S.x0=e.x;S.y0=e.y;}
           else{S.ph='air';S.t=.45;S.x0=e.x;S.y0=e.y;
             const jd=Math.min(d,190);S.x1=e.x+dx/d*jd;S.y1=e.y+dy/d*jd;sJump();}}}
       else if(S.ph==='air'){S.t-=dt;const pr=1-S.t/.45;
         e.x=S.x0+(S.x1-S.x0)*pr;e.y=S.y0+(S.y1-S.y0)*pr;e.air=Math.sin(pr*Math.PI)*46;
         if(S.t<=0){S.ph='hop';S.t=.8;e.air=0;sThud();}}
-      else if(S.ph==='bigjump'){S.t-=dt;const pr=1-S.t/.95;
-        e.x=S.x0+(S.tx-S.x0)*pr;e.y=S.y0+(S.ty-S.y0)*pr;e.air=Math.sin(pr*Math.PI)*140;
-        if(S.t<=0){S.ph='hop';S.t=1;e.air=0;sThud();shake=Math.max(shake,9);}}
+      else if(S.ph==='bigjump'){S.t-=dt;const pr=clamp(1-S.t/S.jd,0,1);
+        e.x=S.x0+(S.tx-S.x0)*pr;e.y=S.y0+(S.ty-S.y0)*pr;e.air=Math.sin(pr*Math.PI)*(S.rage?108:140);
+        if(S.t<=0){e.air=0;sThud();shake=Math.max(shake,8);
+          if(S.tj>0){S.tj--;S.jd=.45;S.t=S.jd;S.tx=player.x;S.ty=player.y; // 즉시 다음 점프(빠르게 연속)
+            addZone(S.tx,S.ty,100,S.jd,0,16);S.x0=e.x;S.y0=e.y;}
+          else{S.ph='hop';S.t=1;}}}
       else if(S.ph==='tongueW'){S.t-=dt;
         if(S.t<=0){
           const x2=e.x+Math.cos(S.ta)*380,y2=e.y+Math.sin(S.ta)*380;
@@ -1488,7 +1497,7 @@ function updateEnemy(e,dt){
           // 분노: 옮긴 자리로 혀가 한 번 더 따라온다 (겹치는 패턴)
           if(S.rage&&!S.t2){S.t2=1;S.ph='tongueW';S.t=.5;
             S.ta=Math.atan2(player.y-e.y,player.x-e.x);
-            addBeam(e.x,e.y,S.ta,380,56,.5,0);sWarn();}
+            addBeam(e.x,e.y,S.ta,380,18,.5,0,1);sWarn();}  // 빨간 직선 경고
           else{S.t2=0;S.ph='hop';S.t=.9;}}}
       break;
     case 'flyB':{
@@ -1883,6 +1892,7 @@ function update(dt){
       if(b.kind==='yarn'){yarnBoom(b);bullets.splice(i,1);continue;}
       let dm=b.dmg;if(b.bossMul&&e.boss)dm*=b.bossMul;
       damageEnemy(e,dm,b.x,b.y);burst(b.x,b.y,['#ffe066','#fff'],3,4);
+      if(b.burnDmg&&e.hp>0){e.burnT=Math.max(e.burnT||0,b.burnDur);e.burnDmg=Math.max(e.burnDmg||0,b.burnDmg);} // 빙의(DoT)
       if(b.boomR)bulletBoom(b);                       // 폭발탄(창의적 업글)
       if(b.fork){const pa=b.rot+Math.PI/2;b.fork=0;   // 분열탄: 처치 시 좌우로 갈라짐
         for(const s of[-1,1])bullets.push({kind:b.kind,x:b.x,y:b.y,vx:Math.cos(pa)*s*460,vy:Math.sin(pa)*s*460,
@@ -2176,6 +2186,10 @@ function draw(){
   for(const f of fxs)if(f.kind==='beam'&&f.warn>0){
     ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.ang);
     const w=f.wd,L=f.len,pr=clamp(1-f.warn/(f.warn0||f.warn||1),0,1);
+    if(f.line){ // 돌진 아님(혓바닥 등) — 화살표 없이 빨간 직선 경고만
+      ctx.globalAlpha=1;ctx.strokeStyle='rgba(255,58,72,'+(.4+pr*.5)+')';ctx.lineWidth=4;ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(L,0);ctx.stroke();
+      ctx.restore();continue;}
     // soft danger lane — gradient across width = no hard rectangle edges
     const gr=ctx.createLinearGradient(0,-w/2,0,w/2);
     gr.addColorStop(0,'rgba(255,60,60,0)');gr.addColorStop(.5,'rgba(255,64,64,.5)');gr.addColorStop(1,'rgba(255,60,60,0)');
@@ -2239,6 +2253,8 @@ function draw(){
     if(e.rage){ctx.globalAlpha=.35+.18*Math.sin(performance.now()/100);
       ctx.strokeStyle='#ff2b40';ctx.lineWidth=5;
       ctx.beginPath();ctx.arc(e.x,yy,e.r*sc+10,0,TAU);ctx.stroke();ctx.globalAlpha=1;}
+    if(e.burnT>0){ctx.globalAlpha=.3+.2*Math.sin(performance.now()/70+e.x); // 빙의(저주) — 보랏빛 영혼불
+      ctx.fillStyle='#9a7aff';ctx.beginPath();ctx.arc(e.x,yy,e.r*sc*.9,0,TAU);ctx.fill();ctx.globalAlpha=1;}
     ctx.save();ctx.translate(e.x,yy);ctx.rotate(rot);
     if(e.invis)ctx.globalAlpha=.2+.1*Math.sin(performance.now()/120);
     ctx.scale((e.face===-1?-1:1)*sx,sy);ctx.drawImage(sp.n,-sp.half,-sp.half);
