@@ -1,5 +1,5 @@
 'use strict';
-const GAME_VER='v5.9-decoy'; // 막보스 코인 전량 즉시정산, 분신술→설치형 미끼폭탄(어그로 유인 7초 후 대폭발)
+const GAME_VER='v5.10-ringgap'; // 두꺼비/슬라임퀸 파문 링에 회전하는 안전 틈 — 완전 원형 회피불가 해소
 // ================= canvas =================
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,zoom=1;
@@ -1198,7 +1198,8 @@ function bossRageFlourish(e){
 }
 // ================= 공간압박 패턴 (보스 페이즈) =================
 // "패턴 게임이 아니라 공간 게임" — 단순 공격을 겹쳐 살아남을 공간을 줄인다.
-// kinds: shrink(외곽→중심 압축) / sweep(회전 빔) / rings(중심→외곽 파문) / half(반쪽 분할)
+// kinds: shrink(외곽→중심 압축) / sweep(회전 빔) / rings(중심→외곽 파문, 안전 틈 있음) / half(반쪽 분할)
+const RING_GAP=.72; // 파문 링의 안전 틈 반각(rad) — ~41°(개구=82°). 완전 원형 회피불가 방지
 function pressKit(e,phase){ // phase 2 = 발동(50%), phase 3 = 강화(25%)
   const s=ST.shape,aR=s.k==='rect'?Math.min(s.w,s.h)/2:s.R;
   const find=k=>press.find(q=>q.src===e&&q.kind===k);
@@ -1238,10 +1239,15 @@ function updatePress(dt){
         x2=p.src.x+Math.cos(a)*p.len,y2=p.src.y+Math.sin(a)*p.len;
         if(distSeg(player.x,player.y,p.src.x,p.src.y,x2,y2)<p.wd/2){hurtPlayer(9);break;}}}
     else if(p.kind==='rings'){p.cd-=dt;
-      if(p.cd<=0){p.cd=p.every;p.waves.push({r:p.r0});sShot();}
+      if(p.cd<=0){p.cd=p.every;
+        // 안전한 '틈'을 두고, 파동마다 틈 각도를 회전 → 항상 살 곳은 있지만 이동을 강제
+        p.gap=(p.gap===undefined?Math.atan2(player.y-p.src.y,player.x-p.src.x):p.gap+rnd(.8,1.7));
+        p.waves.push({r:p.r0,g:p.gap});sShot();}
       for(let j=p.waves.length-1;j>=0;j--){const w2=p.waves[j];w2.r+=p.spd*dt;
         if(w2.r>p.rMax){p.waves.splice(j,1);continue;}
-        if(player.iT<=0&&Math.abs(Math.sqrt(dist2(player.x,player.y,p.src.x,p.src.y))-w2.r)<p.band/2)hurtPlayer(9);}}
+        if(player.iT<=0&&Math.abs(Math.sqrt(dist2(player.x,player.y,p.src.x,p.src.y))-w2.r)<p.band/2){
+          let da=Math.atan2(player.y-p.src.y,player.x-p.src.x)-w2.g;da=Math.abs(Math.atan2(Math.sin(da),Math.cos(da)));
+          if(da>RING_GAP)hurtPlayer(9);}}}  // 틈(±RING_GAP) 밖일 때만 피격
     else if(p.kind==='half'){p.pt+=dt;
       if(p.st==='warn'&&p.pt>=p.warn){p.st='on';p.pt=0;sThud();shake=Math.max(shake,5);}
       else if(p.st==='on'&&p.pt>=p.on){p.st='off';p.pt=0;}
@@ -1264,10 +1270,12 @@ function drawPress(){
         if(!warm){ctx.fillStyle='rgba(255,255,255,.45)';ctx.fillRect(0,-1.5,p.len,3);}
         ctx.restore();}}
     else if(p.kind==='rings'){for(const w2 of p.waves){
+      // 안전한 틈[g-RING_GAP, g+RING_GAP]을 비우고, 위험한 호만 그린다
+      const a0=w2.g+RING_GAP,a1=w2.g+TAU-RING_GAP;
       ctx.globalAlpha=.18;ctx.strokeStyle='#ff4040';ctx.lineWidth=p.band;
-      ctx.beginPath();ctx.arc(p.src.x,p.src.y,w2.r,0,TAU);ctx.stroke();
+      ctx.beginPath();ctx.arc(p.src.x,p.src.y,w2.r,a0,a1);ctx.stroke();
       ctx.globalAlpha=.7;ctx.lineWidth=2;
-      ctx.beginPath();ctx.arc(p.src.x,p.src.y,w2.r+p.band/2,0,TAU);ctx.stroke();
+      ctx.beginPath();ctx.arc(p.src.x,p.src.y,w2.r+p.band/2,a0,a1);ctx.stroke();
       ctx.globalAlpha=1;}}
     else if(p.kind==='half'){const s=ST.shape,hw=(s.k==='rect'?s.w/2:s.R)+70,hh=(s.k==='rect'?s.h/2:s.R)+70;
       const al=p.st==='on'?.2:p.st==='warn'?.08+.06*Math.sin(performance.now()/90):0;
