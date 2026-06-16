@@ -1,5 +1,5 @@
 'use strict';
-const GAME_VER='v5.8-unify'; // 적 투사체 모양+흰테두리 통일(그림자/빨강 제거), 개미=swarm·모기=물고빠지기 역할 분화+예고
+const GAME_VER='v5.9-decoy'; // 막보스 코인 전량 즉시정산, 분신술→설치형 미끼폭탄(어그로 유인 7초 후 대폭발)
 // ================= canvas =================
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,zoom=1;
@@ -430,7 +430,7 @@ const SKILLS={
   rage:{stk:'it_rage',name:'폭주',uses:1,dur:7,buff:'berserk',d:'7초간 공격속도·공격력 폭발!'},
   tiger:{stk:'it_tiger',name:'호랑이 기운',uses:1,dur:5,buff:'tiger',d:'5초간 무적 + 공격력 3배!'},
   inv:{stk:'it_inv',name:'무적냥',uses:1,dur:5,buff:'invinc',d:'5초간 완전 무적!'},
-  clone:{stk:'it_clone',name:'분신술',uses:1,dur:9,buff:'clone',d:'9초간 분신 2마리 소환!'},
+  clone:{stk:'it_clone',name:'분신 미끼',uses:1,instant:'clone',d:'분신을 설치! 적이 몰려들고 7초 뒤 대폭발 💥'},
   bolt:{stk:'it_bolt',name:'천벌',uses:2,instant:'bolt',d:'모든 적에게 즉시 낙뢰!'},
   nuke:{stk:'it_nuke',name:'묘신의 주먹',uses:1,instant:'nuke',d:'맵 전체 초강력 폭발!'},
   hole:{stk:'it_hole',name:'참치 블랙홀',uses:1,instant:'hole',d:'적을 빨아들여 대폭발!'},
@@ -558,7 +558,7 @@ function resetRun(){
   cam={x:0,y:0};shake=0;freezeT=0;slowT=0;flashR=0;flashW=0;spawnT=.5;
   pendingLv=0;levelDelay=0;walkT=0;tutT=4;gemStreak=0;
   bossOn=false;bossDone=false;eliteDone=false;midDone=false;midOn=false;midLoot=0;frzT=0;skillCd=0;echoQ=[];
-  surged=[];hitStop=0;clones=[];holeT=0;press=[];hazT=4;window.__e2=false;
+  surged=[];hitStop=0;clones=[];holeT=0;press=[];hazT=4;decoy=null;window.__e2=false;
   player.snareT=0;player.burstT=0;winT=0;grid.clear();gridUsed.length=0;genObstacles();}
 function recompute(){
   player.speed=player.baseSpeed*(1+player.pass.spd);
@@ -827,9 +827,13 @@ function killEnemy(e){
   if(e.boss&&!e.mid){
     for(const o of enemies)if(o.boss&&!o.mid)o.st.rage=true;
     if(!enemies.some(x=>x.boss&&!x.mid)){
-      // 막보스 처치 — 바닥 전리품 전부 자동 흡입 + 0.9초 승리 여유 후 클리어 (드롭 놓침 방지)
-      bossDone=true; // director 정지(트리클 멈춤). state는 'playing' 유지 → 픽업이 빨려온다
-      for(const g of gems)g.vac=1;for(const g of coinDrops)g.vac=1;for(const g of drops)g.vac=1;
+      // 막보스 처치 — 맵의 코인은 거리 상관없이 전부 즉시 정산(놓침 0), 젬/아이템은 흡입연출
+      bossDone=true; // director 정지(트리클 멈춤). state는 'playing' 유지 → 젬/아이템이 빨려온다
+      if(coinDrops.length){let got=0;const cv=Math.round(1*(1+SV.up.coin*.2));
+        for(const c of coinDrops){got+=cv;}coinDrops.length=0;
+        runCoins+=got;SV.coins+=got;save();sCoin();
+        if(got)floater(player.x,player.y-40,'🪙+'+got,'#ffd75a',true);}
+      for(const g of gems)g.vac=1;for(const g of drops)g.vac=1;
       winT=.9;slowT=Math.max(slowT,.55);}}
   const M={12:'연쇄냥!',25:'학살냥!!',50:'폭풍냥냥!!!',90:'전설의 발톱!!!'};
   if(M[combo]&&lastMile!==combo){lastMile=combo;banner(combo+'콤보 '+M[combo],'#ffd23e',1.1);
@@ -907,10 +911,12 @@ function useSkill(){
   skillCd=.5;const key=player.skill.key,S=SKILLS[key];
   player.skill.uses--;if(player.skill.uses<=0)player.skill=null;
   if(S.buff){player.buffs[S.buff]=S.dur;sLevel();flashW=.8;
-    const labels={berserk:'😤 폭주!! 미쳐 날뛴다!',tiger:'🐯 호랑이 기운!! 무적+3배!',invinc:'✨ 무적냥!!',clone:'👯 분신술!!'};
+    const labels={berserk:'😤 폭주!! 미쳐 날뛴다!',tiger:'🐯 호랑이 기운!! 무적+3배!',invinc:'✨ 무적냥!!'};
     banner(labels[S.buff]||S.name,'#ffd23e',1.6);
-    if(S.buff==='clone'){clones=[{a:0},{a:Math.PI}];}
     return;}
+  if(key==='clone'){ // 분신 미끼 — 설치형, 적 어그로 유인 후 7초 뒤 폭발
+    decoy={x:player.x,y:player.y,t:7};sLevel();flashW=.5;puff(player.x,player.y,10);
+    banner('👯 분신 미끼!! 7초 뒤 폭발','#9ad0ff',1.6);return;}
   if(key==='nuke'){flashW=1;shake=16;freezeT=Math.max(freezeT,.1);sBig();sMeow();
     banner('💥 묘신의 주먹!!','#ff5f3c',1.3);
     fxs.push({kind:'nova',x:player.x,y:player.y,r:40,max:Math.max(W,H),t:0,col:'#ff5f3c'});
@@ -925,7 +931,13 @@ function useSkill(){
       e.x=player.x+Math.cos(a)*110;e.y=player.y+Math.sin(a)*110;}
     for(const g of gems)g.vac=1;for(const g of coinDrops)g.vac=1;for(const g of drops)g.vac=1;
     holeT=.45;}}
-let holeT=0,clones=[],press=[],hazT=4,winT=0; // press = 보스 공간압박 / hazT = 위험장판 / winT = 막보스 처치 후 승리 흡입 타이머
+let holeT=0,clones=[],press=[],hazT=4,winT=0,decoy=null; // decoy = 분신 미끼(적 어그로 유인 후 폭발)
+// 분신 미끼 폭발 — 7초 모인 적 떼를 한 방에
+function decoyBoom(x,y){const R=210;
+  fxs.push({kind:'nova',x,y,r:20,max:R,t:0,col:'#9ad0ff'});
+  fxs.push({kind:'shock',x,y,t:0,max:R*.9,col:'#fff'});
+  burst(x,y,['#9ad0ff','#fff','#ffe066'],26,11);sBig();shake=Math.max(shake,12);flashW=Math.max(flashW,.6);
+  eachNear(x,y,R+96,e=>{const RR=R+e.r*e.scale*.6;if(dist2(x,y,e.x,e.y)<RR*RR)damageEnemy(e,180+(e.boss?e.maxhp*.04:0),x,y);});}
 // ================= weapons fire =================
 function newWeapon(key){player.weapons[key]={dmg:1,rate:1,n:0,size:1,pierce:0,sp:{},t:0,pow:0,lvl:0,evo:null};}
 // defensive / utility cards (not weapons)
@@ -1276,7 +1288,9 @@ function updateEnemy(e,dt){
   if(e.stun>0){e.stun-=dt;e.flash=Math.max(e.flash,.3);return;}
   if(e.boss&&!e.mid)e.fightT=(e.fightT||0)+dt; // 소프트 인레이지용 보스전 경과시간
   e.wob+=dt*3;e.bIT-=dt;e.flash*=Math.pow(.001,dt);
-  const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy)||1;
+  // 분신 미끼: 잡몹은 미끼로 어그로(보스는 패턴 유지). 이동/조준이 전부 이 타겟을 따른다
+  const ag=(decoy&&!e.boss)?decoy:player;
+  const dx=ag.x-e.x,dy=ag.y-e.y,d=Math.hypot(dx,dy)||1;
   e.face=dx<0?-1:1;
   const S=e.st;
   // 추가 페이즈: 75%/25%에서 보스 고유 일격 변형 발동 (메인 보스만 — 패턴 밀도 ↑)
@@ -1784,16 +1798,9 @@ function update(dt){
   // dopamine buff timers
   for(const k in player.buffs){player.buffs[k]-=dt;if(player.buffs[k]<=0)delete player.buffs[k];}
   if(player.buffs.invinc)player.iT=Math.max(player.iT,.1);
-  // 분신술 clones — orbit & auto-fire
-  if(player.buffs.clone){
-    for(let ci=0;ci<clones.length;ci++){const cl=clones[ci];cl.a+=dt*1.4;
-      cl.x=player.x+Math.cos(cl.a)*70;cl.y=player.y+Math.sin(cl.a)*70;
-      cl.t=(cl.t||0)-dt;
-      if(cl.t<=0){const tg=nearTgt2(cl.x,cl.y,640);
-        if(tg){cl.t=.32;const a=Math.atan2(tg.y-cl.y,tg.x-cl.x);
-          bullets.push({kind:'paw',x:cl.x,y:cl.y,vx:Math.cos(a)*560,vy:Math.sin(a)*560,
-            dmg:14*player.dmgMul,r:8,life:1.1,pierce:1,rot:a,spr:'paw',scale:.95,glow:2,gcol:'#9ad0ff'});}}}}
-  else if(clones.length)clones=[];
+  // 분신 미끼 — 설치된 동안 적이 이걸 향해 몰려들고(updateEnemy서 타겟 리다이렉트), 7초 뒤 폭발
+  if(decoy){decoy.t-=dt;
+    if(decoy.t<=0){decoyBoom(decoy.x,decoy.y);decoy=null;}}
   if(holeT>0){holeT-=dt;if(holeT<=0){explode(player.x,player.y,220,0);shake=14;flashW=.8;
     for(const e of enemies.slice())if(dist2(player.x,player.y,e.x,e.y)<260*260)damageEnemy(e,260,player.x,player.y);}}
   if(winT>0){winT-=dt;if(winT<=0){winT=0;stageCleared();}} // 막보스 처치 후 전리품 흡입 끝 → 클리어
@@ -2320,12 +2327,16 @@ function draw(){
     ctx.strokeStyle='rgba(0,0,0,.4)';ctx.lineWidth=5;
     ctx.strokeText('하악-!!',f.x,f.y-46);ctx.fillStyle='#ff8ad8';ctx.fillText('하악-!!',f.x,f.y-46);
     ctx.globalAlpha=1;}
-  // 분신술 clones (drawn translucent behind)
-  if(player.buffs.clone)for(const cl of clones){if(cl.x===undefined)continue;
-    ctx.globalAlpha=.5;const ps=STK[player.stk];
-    ctx.save();ctx.translate(cl.x,cl.y);ctx.scale(.85,.85);
-    ctx.drawImage(ps.n,-ps.half,-ps.half);ctx.restore();
-    ctx.globalAlpha=1;}
+  // 분신 미끼 — 반투명 쌍둥이 + 폭발 임박 시 깜빡임 + 위험 링
+  if(decoy){const blink=decoy.t<1.6&&((decoy.t*9)|0)%2===0; // 1.6초 전부터 빠르게 깜빡
+    if(!blink){const ps=STK[player.stk];
+      ctx.globalAlpha=.62;
+      ctx.save();ctx.translate(decoy.x,decoy.y);ctx.drawImage(ps.n,-ps.half,-ps.half);ctx.restore();
+      ctx.globalAlpha=1;}
+    // 폭발 반경 예고 링 (임박할수록 또렷)
+    const pr=clamp(1-decoy.t/7,0,1);
+    ctx.globalAlpha=.25+pr*.45;ctx.strokeStyle='#9ad0ff';ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(decoy.x,decoy.y,210*(0.5+pr*0.5),0,TAU);ctx.stroke();ctx.globalAlpha=1;}
   // player
   if(state!=='dead'){
     ctx.globalAlpha=.18;ctx.fillStyle='#1c3206';
