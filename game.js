@@ -1,5 +1,5 @@
 'use strict';
-const GAME_VER='v5.7-perf'; // 렉: 뷰포트 컬링(탄/적탄/파티클/플로터/노바) + 글로우할로 강화탄·데스크탑한정 + 파티클캡↓
+const GAME_VER='v5.8-unify'; // 적 투사체 모양+흰테두리 통일(그림자/빨강 제거), 개미=swarm·모기=물고빠지기 역할 분화+예고
 // ================= canvas =================
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,zoom=1;
@@ -499,7 +499,7 @@ const MOB={
   hedge:{stk:'hedge',r:15,hp:17,sp:76,xp:2,dmg:12,beh:'rush'},
   snake:{stk:'snake',r:18,hp:28,sp:60,xp:3,dmg:12,beh:'eat',coin:2},
   dande:{stk:'dande',r:17,hp:18,sp:0,xp:2,dmg:9,beh:'turret'},
-  ant:{stk:'ant',r:13,hp:8,sp:104,xp:1,dmg:7,beh:'dart'},        // 놀이터 개미
+  ant:{stk:'ant',r:11,hp:5,sp:128,xp:1,dmg:7,beh:'chase'},       // 개미 = 빠르고 약한 떼(근접 swarm). 모기와 역할 분리
   pebble:{stk:'pebble',r:16,hp:24,sp:46,xp:2,dmg:11,beh:'chase'},// 놀이터 돌멩이
   acorn:{stk:'acorn',r:15,hp:16,sp:0,xp:2,dmg:8,beh:'turret'},   // 도토리포 (포탑형)
   bee:{stk:'bee',r:12,hp:10,sp:92,xp:1,dmg:8,beh:'shooter'},     // 꿀벌 (이동 원거리형)
@@ -1298,8 +1298,16 @@ function updateEnemy(e,dt){
     if(Math.random()<dt*4&&parts.length<460)parts.push({x:e.x+rnd(-e.r,e.r),y:e.y-e.r,vx:rnd(-.6,.6),vy:-rnd(.6,1.6),life:.6,col:'#ff5a5a',sz:rnd(4,7),puff:1});}
   switch(e.beh){
     case 'chase':e.x+=(dx/d*e.sp+Math.cos(e.wob)*12)*dt;e.y+=(dy/d*e.sp+Math.sin(e.wob)*12)*dt;break;
-    case 'dart':{const sp=e.sp*(.5+.8*Math.abs(Math.sin(e.wob)));
-      e.x+=(dx/d*sp+Math.cos(e.wob*1.7)*28)*dt;e.y+=(dy/d*sp+Math.sin(e.wob*1.7)*28)*dt;break;}
+    case 'dart':{ // 모기 = 물고 빠지기: 접근 → 방향 고정 빠른 돌진(피할 수 있음) → 잠깐 후퇴 반복
+      if(!S.ph)S.ph='app';
+      if(S.ph==='app'){e.x+=(dx/d*e.sp*.55+Math.cos(e.wob*1.8)*30)*dt;e.y+=(dy/d*e.sp*.55+Math.sin(e.wob*1.8)*30)*dt;
+        if(d<175){S.ph='aim';S.t=.28;S.ang=Math.atan2(dy,dx);}}      // 잠깐 조준(예고)
+      else if(S.ph==='aim'){S.t-=dt;e.x+=Math.cos(e.wob)*10*dt;e.y+=Math.sin(e.wob)*10*dt;
+        if(S.t<=0){S.ph='dash';S.t=.34;}}
+      else if(S.ph==='dash'){S.t-=dt;e.x+=Math.cos(S.ang)*e.sp*2.3*dt;e.y+=Math.sin(S.ang)*e.sp*2.3*dt;
+        if(S.t<=0){S.ph='back';S.t=.55;}}
+      else{S.t-=dt;e.x-=(dx/d*e.sp*.7)*dt;e.y-=(dy/d*e.sp*.7)*dt;if(S.t<=0)S.ph='app';}  // 후퇴
+      break;}
     case 'turret':{S.t=(S.t||rnd(3,6))-dt;          // 발사빈도 ~1/4
       if(S.t<=0&&d<640){
         if(e.type==='acorn'){S.t=12;sThud();
@@ -2047,65 +2055,35 @@ function drawObstacle(ob){
   function rr(bx,by,bw,bh,rad){ctx.beginPath();
     ctx.moveTo(bx+rad,by);ctx.arcTo(bx+bw,by,bx+bw,by+bh,rad);ctx.arcTo(bx+bw,by+bh,bx,by+bh,rad);
     ctx.arcTo(bx,by+bh,bx,by,rad);ctx.arcTo(bx,by,bx+bw,by,rad);ctx.closePath();}}
-function drawEb(b){ // hostile bullet — readable core, NO red ring (빨강은 착탄지점 같은 위험타일 전용)
-  // soft dark drop-halo just for contrast against bright maps (not a danger marker)
-  ctx.globalAlpha=.3;ctx.fillStyle='#241c2c';
-  ctx.beginPath();ctx.arc(b.x,b.y+2,b.r+5,0,TAU);ctx.fill();
-  ctx.globalAlpha=1;
-  ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.rot);
-  if(b.spr==='thorn'){ctx.fillStyle='#5a4632';
-    ctx.beginPath();for(let i=0;i<6;i++){const a=i/6*TAU,rr=i%2?b.r*.55:b.r*1.1;
-      ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);}ctx.closePath();ctx.fill();
-    ctx.fillStyle='#8a7558';ctx.beginPath();ctx.arc(0,0,b.r*.4,0,TAU);ctx.fill();}
-  else if(b.spr==='dart'){ctx.fillStyle='#46464e';
-    ctx.beginPath();ctx.ellipse(0,0,b.r*1.3,b.r*.5,0,0,TAU);ctx.fill();
-    ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(-b.r*.4,0,b.r*.3,b.r*.2,0,0,TAU);ctx.fill();}
-  else if(b.spr==='goo'){ctx.fillStyle='#6fae3e';
-    ctx.beginPath();ctx.arc(0,0,b.r,0,TAU);ctx.fill();
-    ctx.fillStyle='#9fd45e';ctx.beginPath();ctx.arc(-b.r*.25,-b.r*.25,b.r*.4,0,TAU);ctx.fill();}
-  else if(b.spr==='orb'){ctx.fillStyle='#9b5fe0';
-    ctx.beginPath();ctx.arc(0,0,b.r,0,TAU);ctx.fill();
-    ctx.strokeStyle='#fff';ctx.lineWidth=2.5;ctx.stroke();}
-  else if(b.spr==='venom'){ctx.fillStyle='#4f9b3f';
-    ctx.beginPath();ctx.arc(0,0,b.r,0,TAU);ctx.fill();
-    ctx.strokeStyle='#2c5e22';ctx.lineWidth=2.5;ctx.stroke();}
-  else if(b.spr==='lid'){ctx.fillStyle='#8e949c';
-    ctx.beginPath();ctx.arc(0,0,b.r,0,TAU);ctx.fill();
-    ctx.strokeStyle='#5d6168';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,b.r*.55,0,TAU);ctx.stroke();}
-  else if(b.spr==='bone'){ctx.drawImage(STK.bone.n,-STK.bone.half,-STK.bone.half);}
-  else if(b.spr==='rock'){ctx.drawImage(STK.rock.n,-STK.rock.half,-STK.rock.half);}
-  else if(b.spr==='shuriken'){ctx.rotate(performance.now()/60);ctx.drawImage(STK.shuriken.n,-STK.shuriken.half,-STK.shuriken.half);}
-  else if(b.spr==='dung'){ctx.rotate(performance.now()/120);ctx.drawImage(STK.dung.n,-STK.dung.half,-STK.dung.half);}
-  else if(b.spr==='feather'){ctx.fillStyle='#aeb6c2';
-    ctx.beginPath();ctx.ellipse(0,0,b.r*1.2,b.r*.5,0,0,TAU);ctx.fill();
-    ctx.strokeStyle='#6a727e';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-b.r,0);ctx.lineTo(b.r,0);ctx.stroke();}
-  else if(b.spr==='sandp'){ctx.fillStyle='#d6b478';
-    ctx.beginPath();ctx.arc(0,0,b.r,0,TAU);ctx.fill();
-    ctx.fillStyle='#b8945a';ctx.beginPath();ctx.arc(-b.r*.3,-b.r*.3,b.r*.4,0,TAU);ctx.fill();}
-  else if(b.spr==='dirt'){ctx.fillStyle='#7a5a3a';
-    ctx.beginPath();for(let i=0;i<6;i++){const a=i/6*TAU,rr=i%2?b.r*.6:b.r;ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);}ctx.closePath();ctx.fill();
-    ctx.fillStyle='#9a7a52';ctx.beginPath();ctx.arc(-b.r*.25,-b.r*.25,b.r*.35,0,TAU);ctx.fill();}
-  else if(b.spr==='acornp'){ctx.fillStyle='#b5762f';
-    ctx.beginPath();ctx.ellipse(0,b.r*.2,b.r*.8,b.r,0,0,TAU);ctx.fill();
-    ctx.fillStyle='#7a4a22';ctx.beginPath();ctx.ellipse(0,-b.r*.5,b.r*.9,b.r*.5,0,0,TAU);ctx.fill();}
-  else if(b.spr==='sting'){ctx.fillStyle='#ffce3a';ctx.strokeStyle='#3a3026';ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.ellipse(0,0,b.r*1.3,b.r*.55,0,0,TAU);ctx.fill();ctx.stroke();
-    ctx.fillStyle='#3a3026';ctx.beginPath();ctx.moveTo(b.r*1.1,0);ctx.lineTo(b.r*1.9,0);ctx.lineTo(b.r*1.1,b.r*.4);ctx.fill();}
-  else if(b.spr==='seed'){ // 민들레 홀씨 — 밝고 또렷한 솜털 + 노란 씨앗
-    ctx.fillStyle='#fffef2';ctx.beginPath();ctx.arc(0,0,b.r,0,TAU);ctx.fill();
-    ctx.strokeStyle='#fff8d0';ctx.lineWidth=2;
-    for(let k=0;k<8;k++){const a=k/8*TAU;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(a)*b.r*1.25,Math.sin(a)*b.r*1.25);ctx.stroke();}
-    ctx.fillStyle='#ffd23e';ctx.beginPath();ctx.arc(0,0,b.r*.5,0,TAU);ctx.fill();
-    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-b.r*.18,-b.r*.18,b.r*.2,0,TAU);ctx.fill();}
-  else if(b.spr==='wispb'){ctx.fillStyle='#5ec8ff'; // 도깨비불 추적탄
-    ctx.beginPath();ctx.arc(0,0,b.r,0,TAU);ctx.fill();
-    ctx.fillStyle='#c7eeff';ctx.beginPath();ctx.arc(-b.r*.25,-b.r*.25,b.r*.42,0,TAU);ctx.fill();}
-  else if(b.spr==='web'){ctx.fillStyle='rgba(201,160,255,.5)'; // 끈적 거미줄
-    ctx.beginPath();ctx.arc(0,0,b.r,0,TAU);ctx.fill();
-    ctx.strokeStyle='#e8ddff';ctx.lineWidth=1.6;
-    for(let k=-1;k<=1;k++){ctx.beginPath();ctx.moveTo(-b.r,k*b.r*.5);ctx.lineTo(b.r,k*b.r*.5);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(k*b.r*.5,-b.r);ctx.lineTo(k*b.r*.5,b.r);ctx.stroke();}}
-  else{ctx.fillStyle='#c0392b';ctx.beginPath();ctx.arc(0,0,b.r,0,TAU);ctx.fill();}
+// 적 투사체 통일 규칙 — 모양 + 흰 테두리 (그림자/빨강 위험표시 없음).
+// 흰 테두리는 '살짝 키운 흰 실루엣을 뒤에 깔기'로 구현 → 어떤 모양이든 깔끔하고 일관됨.
+function drawEb(b){
+  ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.rot);ctx.lineJoin='round';
+  const r=b.r,s=b.spr;let col='#9b5fe0',shape;
+  const circle=()=>{ctx.beginPath();ctx.arc(0,0,r,0,TAU);};
+  const star=(n,inr)=>{ctx.beginPath();for(let i=0;i<n*2;i++){const a=i/(n*2)*TAU,rr=i%2?r*inr:r*1.12;ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);}ctx.closePath();};
+  if(s==='thorn'){col='#7a5a3a';shape=()=>star(4,.5);}
+  else if(s==='dirt'){col='#9a7a52';shape=()=>star(4,.5);}
+  else if(s==='shuriken'){col='#46464e';ctx.rotate(performance.now()/60);shape=()=>star(4,.42);}
+  else if(s==='dart'){col='#586472';shape=()=>{ctx.beginPath();ctx.moveTo(r*1.5,0);ctx.lineTo(0,r*.62);ctx.lineTo(-r*.85,0);ctx.lineTo(0,-r*.62);ctx.closePath();};}
+  else if(s==='sting'){col='#ffce3a';shape=()=>{ctx.beginPath();ctx.moveTo(r*1.7,0);ctx.lineTo(-r*.7,r*.62);ctx.lineTo(-r*.7,-r*.62);ctx.closePath();};}
+  else if(s==='feather'){col='#aeb6c2';shape=()=>{ctx.beginPath();ctx.ellipse(0,0,r*1.35,r*.55,0,0,TAU);};}
+  else if(s==='bone'){col='#f3ecd8';shape=()=>{ctx.beginPath();ctx.arc(-r,0,r*.56,0,TAU);ctx.arc(r,0,r*.56,0,TAU);ctx.rect(-r,-r*.32,r*2,r*.64);};}
+  else if(s==='rock'){col='#8e949c';shape=()=>{ctx.beginPath();for(let i=0;i<6;i++){const a=i/6*TAU+.3,rr=r*(i%2?.92:1.08);ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);}ctx.closePath();};}
+  else if(s==='acornp'){col='#b5762f';shape=()=>{ctx.beginPath();ctx.ellipse(0,r*.12,r*.82,r*1.05,0,0,TAU);};}
+  else if(s==='goo'){col='#6fae3e';shape=circle;}
+  else if(s==='venom'){col='#3f8f33';shape=circle;}
+  else if(s==='lid'){col='#9aa0a8';shape=circle;}
+  else if(s==='dung'){col='#7a5a32';shape=circle;}
+  else if(s==='sandp'){col='#d6b478';shape=circle;}
+  else if(s==='wispb'){col='#5ec8ff';shape=circle;}
+  else if(s==='web'){col='#c9a0ff';shape=circle;}
+  else if(s==='seed'){col='#fff2c4';shape=circle;}
+  else shape=circle; // orb 및 기타 = 보라 원
+  // 흰 테두리: 키운 흰 실루엣 → 그 위에 색 채움
+  const ow=clamp(r*.3,2.6,4.4),o=1+ow/r;
+  ctx.save();ctx.scale(o,o);ctx.fillStyle='#fff';shape();ctx.fill();ctx.restore();
+  ctx.fillStyle=col;shape();ctx.fill();
   ctx.restore();}
 function draw(){
   // sky gradient (screen space — depth from light top to darker ground)
@@ -2190,7 +2168,7 @@ function draw(){
     if(!onScreen(e))continue;
     const yy=e.y-(e.air||0);
     let rot=Math.sin(e.wob*2)*.1,sc=e.scale;
-    if((e.beh==='rush'||e.beh==='boar')&&e.st.ph==='aim')rot=Math.sin(performance.now()/30)*.16;
+    if((e.beh==='rush'||e.beh==='boar'||e.beh==='dart')&&e.st.ph==='aim')rot=Math.sin(performance.now()/30)*.16; // 돌진 직전 부르르(예고)
     if(e.st&&e.st.fuse>=0&&e.st.fuse!==undefined)sc*=1+Math.sin(performance.now()/50)*.12;
     // squash & stretch on hit
     const sq=e.sq||0,sx=sc*(1+sq*.32),sy=sc*(1-sq*.26);
