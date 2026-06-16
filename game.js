@@ -1,5 +1,5 @@
 'use strict';
-const GAME_VER='v5.10-ringgap'; // 두꺼비/슬라임퀸 파문 링에 회전하는 안전 틈 — 완전 원형 회피불가 해소
+const GAME_VER='v5.11-pigeonlaser'; // 비둘기 레이저 재설계: 멈춤→삐비빅 예고→30° 지잉빔(회피 가능), 상시 빙글빔 제거
 // ================= canvas =================
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,zoom=1;
@@ -1206,9 +1206,7 @@ function pressKit(e,phase){ // phase 2 = 발동(50%), phase 3 = 강화(25%)
   switch(e.beh){
     case 'boar': // 멧돼지: 압박은 '가두는 원'이 아니라 돌진 자국 — 불타는 흙길이 쌓이며 설 자리가 좁아진다 (updateEnemy 돌진에서 처리)
       break;
-    case 'topgun': // 비둘기: 기총소사 — 천천히 도는 사격 레인
-      if(phase===2)press.push({kind:'sweep',src:e,n:1,ang:rnd(0,TAU),spd:.5,len:740,wd:46,warmup:1.3,t:0});
-      else{const p=find('sweep');if(p){p.n=2;p.spd=.62;}}
+    case 'topgun': // 비둘기: 레이저는 자체 행동(멈춤→예고→30° 지잉빔)으로 처리 — 분노 땐 행동에서 발동확률↑
       break;
     case 'toad': case 'frogq': // 두꺼비/슬라임퀸: 독·점액 파문이 퍼져나간다
       if(phase===2)press.push({kind:'rings',src:e,r0:e.r*e.scale+10,rMax:620,spd:150,band:34,every:2.7,cd:1.2,waves:[],t:0});
@@ -1446,14 +1444,23 @@ function updateEnemy(e,dt){
         if(S.spiral>0){S.spT-=dt;
           if(S.spT<=0){S.spT=.09;S.spiral--;S.spA+=.62;
             efire(e.x,e.y,Math.cos(S.spA)*180,Math.sin(S.spA)*180,'dart',9,4,10);}}
-        if(S.t<=0){S.mode='aim';S.t=.55;S.ang2=Math.atan2(dy,dx);
-          addBeam(e.x,e.y,S.ang2,720,64,.55,0);}}
+        if(S.t<=0){ // 다음 공격: 지잉~ 레이저(주력) 또는 돌진
+          if(Math.random()<(S.rage?.62:.42)){S.mode='lstop';S.t=1.05;S.la=Math.atan2(dy,dx);S.ldir=Math.random()<.5?1:-1;S.lastbk=99;}
+          else{S.mode='aim';S.t=.55;S.ang2=Math.atan2(dy,dx);addBeam(e.x,e.y,S.ang2,720,64,.55,0);}}}
       else if(S.mode==='aim'){S.t-=dt;
         if(S.t<=0){S.mode='dash';S.t=.85;sJump();S.eggd=0;}}
-      else{S.t-=dt;
+      else if(S.mode==='dash'){S.t-=dt;
         e.x+=Math.cos(S.ang2)*620*dt;e.y+=Math.sin(S.ang2)*620*dt;
         S.eggd+=dt;
         if(S.eggd>.28){S.eggd=0;addZone(e.x,e.y,62,.85,0,12);}
+        if(S.t<=0){S.mode='orbit';S.t=3;}}
+      else if(S.mode==='lstop'){ // 제자리 멈춤 + 발사 방향 삐비비빅 예고 (안 움직임)
+        const bk=Math.ceil(S.t*6);if(bk!==S.lastbk){S.lastbk=bk;tone(1300,.05,'square',.05);}
+        if(S.t<=0){S.mode='lsweep';S.t=.7;sZap();shake=Math.max(shake,4);}}
+      else{ // lsweep — 30°(~0.52rad)만 0.7초에 걸쳐 지잉~ 쓸고 지나가는 빔. 제자리.
+        S.la+=S.ldir*0.743*dt;
+        const x2=e.x+Math.cos(S.la)*760,y2=e.y+Math.sin(S.la)*760;
+        if(player.iT<=0&&distSeg(player.x,player.y,e.x,e.y,x2,y2)<22)hurtPlayer(12);
         if(S.t<=0){S.mode='orbit';S.t=3;}}
       break;}
     case 'frogq':
@@ -2204,6 +2211,17 @@ function draw(){
     if(e.beh==='boar'&&e.st.ph==='dizzy'){
       ctx.font='20px Jua,sans-serif';ctx.textAlign='center';
       ctx.fillText('💫',e.x+Math.cos(e.wob*4)*14,yy-e.r-16);}
+    if(e.beh==='topgun'&&(e.st.mode==='lstop'||e.st.mode==='lsweep')){const a=e.st.la,L=760;
+      if(e.st.mode==='lstop'){ // 발사 방향 예고 — 가늘게 깜빡이며 또렷해짐
+        const pr=1-e.st.t/1.05;ctx.globalAlpha=.2+pr*.55+.15*Math.sin(performance.now()/40);
+        ctx.strokeStyle='#ff5a6a';ctx.lineWidth=3+pr*3;ctx.lineCap='round';
+        ctx.beginPath();ctx.moveTo(e.x,yy);ctx.lineTo(e.x+Math.cos(a)*L,yy+Math.sin(a)*L);ctx.stroke();ctx.globalAlpha=1;}
+      else{ // 지잉~ 실제 빔: 빨강 위험대 + 흰 코어
+        ctx.save();ctx.translate(e.x,yy);ctx.rotate(a);
+        const g=ctx.createLinearGradient(0,-22,0,22);
+        g.addColorStop(0,'rgba(255,90,110,0)');g.addColorStop(.5,'rgba(255,64,84,.55)');g.addColorStop(1,'rgba(255,90,110,0)');
+        ctx.fillStyle=g;ctx.fillRect(0,-22,L,44);
+        ctx.fillStyle='#fff';ctx.fillRect(0,-3.5,L,7);ctx.restore();}}
     if(e.beh==='racc'){const o=e.st.orb||0,R=e.st.orbR||88,nL=e.st.rage?4:3;
       for(let i=0;i<nL;i++){const a=o+i/nL*TAU,tx=e.x+Math.cos(a)*R,ty=yy+Math.sin(a)*R;
         ctx.fillStyle='rgba(255,50,50,.3)';
