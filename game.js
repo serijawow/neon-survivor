@@ -1,5 +1,5 @@
 'use strict';
-const GAME_VER='v5.11-pigeonlaser'; // 비둘기 레이저 재설계: 멈춤→삐비빅 예고→30° 지잉빔(회피 가능), 상시 빙글빔 제거
+const GAME_VER='v5.12-polish'; // 배너 누적상승, 버프 타이머 머리위, 호랑이=무적X, 참치회오리 아이템전용, 탄 그림자→흰테두리·글로우제거, 상어 빨강, 모기 원거리돌진, 듀오 잡몹↓
 // ================= canvas =================
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,zoom=1;
@@ -702,10 +702,11 @@ function doSurge(){
       spawnEnemy(pick,player.x+Math.cos(a)*R,player.y+Math.sin(a)*R);}},950);}
 function director(dt){
   if(bossDone)return;
-  if(bossOn){ // 보스전에도 잡몹이 얇게 흘러들어온다 — 학살 텍스처+젬 유지 (보스 집중은 유지되게 약하게)
+  if(bossOn){ // 보스전엔 잡몹을 아주 얇게만 — 보스에 집중. (듀오/소환형 보스는 자체 소환이 있어 캡을 더 낮게)
     spawnT-=dt;
-    if(spawnT<=0){spawnT=1.1;
-      if(enemies.length<56)spawnEnemy(pickMob(ST.waves[0].pool));}
+    const duoOrSummon=ST.boss==='duo';
+    if(spawnT<=0){spawnT=duoOrSummon?2.6:1.8;
+      if(enemies.length<(duoOrSummon?16:26))spawnEnemy(pickMob(ST.waves[0].pool));}
     return;}
   // ===== bosses gated by PLAYER LEVEL (clear time varies by build/skill → real ranking) =====
   if(player.level>=BOSS_LV){spawnBoss();return;}           // boss at Lv.15
@@ -850,7 +851,7 @@ function dropItem(x,y,kind){if(drops.length>24)return;
   drops.push({x,y,kind,t:rnd(0,3)});}
 function hurtPlayer(dmg){
   if(player.iT>0||state!=='playing')return;
-  if(player.buffs&&(player.buffs.invinc||player.buffs.tiger)){floater(player.x,player.y-30,'무적!','#ffd23e',true);return;}
+  if(player.buffs&&player.buffs.invinc){floater(player.x,player.y-30,'무적!','#ffd23e',true);return;} // 호랑이기운은 무적 없음(공격력 3배만)
   if(player.shieldT>0){floater(player.x,player.y-30,'무적!','#ffd23e',true);return;}
   if(player.dodge&&Math.random()<player.dodge){player.iT=.35;
     floater(player.x,player.y-30,'회피!','#7ec8ff',true);tone(900,.08,'sine',.1,1400);
@@ -925,12 +926,10 @@ function useSkill(){
     for(const e of enemies.slice()){fxs.push({kind:'bolt',x1:e.x,y1:e.y-260,x2:e.x,y2:e.y,t:0});
       fxs.push({kind:'sky',x:e.x,y:e.y,t:0});e.stun=Math.max(e.stun,.8);damageEnemy(e,220+(e.boss?e.maxhp*.03:0));}
     shake=12;}
-  else if(key==='hole'){noise(.6,.2,800,'bandpass');banner('🌀 참치 블랙홀!!','#7ec8ff',1.3);
-    for(const e of enemies){if(e.boss)continue;
-      const a=Math.atan2(e.y-player.y,e.x-player.x);
-      e.x=player.x+Math.cos(a)*110;e.y=player.y+Math.sin(a)*110;}
+  else if(key==='hole'){noise(.6,.2,800,'bandpass');banner('🌀 참치 블랙홀!! 전리품 흡입','#7ec8ff',1.3);
+    // 몬스터는 건드리지 않고, 맵의 모든 전리품(젬·코인·아이템)만 빨아들인다
     for(const g of gems)g.vac=1;for(const g of coinDrops)g.vac=1;for(const g of drops)g.vac=1;
-    holeT=.45;}}
+    fxs.push({kind:'nova',x:player.x,y:player.y,r:20,max:340,t:0,col:'#7ec8ff'});}}
 let holeT=0,clones=[],press=[],hazT=4,winT=0,decoy=null; // decoy = 분신 미끼(적 어그로 유인 후 폭발)
 // 분신 미끼 폭발 — 7초 모인 적 떼를 한 방에
 function decoyBoom(x,y){const R=210;
@@ -1514,23 +1513,24 @@ function updateEnemy(e,dt){
         addZone(player.x+rnd(-90,90),player.y+rnd(-90,90),70,1,0,13);}
       break;}
     case 'mosqB':
-      if(!S.ph){S.ph='orbit';S.t=2.4;S.ang=rnd(0,TAU);S.chain=0;}
+      if(!S.ph){S.ph='orbit';S.t=2.4;S.ang=rnd(0,TAU);}
       if(S.ph==='orbit'){S.t-=dt;S.ang+=dt*(S.rage?2.5:1.8);
         const R=200,tx=player.x+Math.cos(S.ang)*R,ty=player.y+Math.sin(S.ang)*R;
         e.x+=(tx-e.x)*Math.min(1,dt*4.5);e.y+=(ty-e.y)*Math.min(1,dt*4.5);
-        if(S.t<=0){S.ph='aim';S.t=.5;S.ang2=Math.atan2(dy,dx);
-          addBeam(e.x,e.y,S.ang2,460,52,.5,0);}}
-      else if(S.ph==='aim'){S.t-=dt;
-        if(S.t<=0){S.ph='dash';S.t=.6;sJump();}}
-      else{S.t-=dt;
-        e.x+=Math.cos(S.ang2)*540*dt;e.y+=Math.sin(S.ang2)*540*dt;
-        if(player.iT<=0&&d<e.r+player.r+6){hurtPlayer(12);
-          e.hp=Math.min(e.maxhp,e.hp+e.maxhp*.08);
-          floater(e.x,e.y-e.r-10,'🩸 흡혈!','#ff3860',true);}
-        if(S.t<=0){S.chain++;
-          if(S.chain<2&&Math.random()<.6){S.ph='aim';S.t=.4;S.ang2=Math.atan2(player.y-e.y,player.x-e.x);
-            addBeam(e.x,e.y,S.ang2,460,52,.4,0);}
-          else{S.chain=0;S.ph='orbit';S.t=S.rage?1.7:2.4;}}}
+        if(S.t<=0){ // 화면 밖 멀리로 물러날 지점 선정
+          const a=rnd(0,TAU),far=900;S.fx=player.x+Math.cos(a)*far;S.fy=player.y+Math.sin(a)*far;
+          S.ph='retreat';S.t=.75;sJump();}}
+      else if(S.ph==='retreat'){S.t-=dt;e.invis=.55; // 멀리 빠르게 빠짐(살짝 흐려짐)
+        e.x+=(S.fx-e.x)*Math.min(1,dt*5);e.y+=(S.fy-e.y)*Math.min(1,dt*5);
+        if(S.t<=0){S.ph='aim';S.t=.8;S.ang2=Math.atan2(player.y-e.y,player.x-e.x);
+          addBeam(e.x,e.y,S.ang2,1500,56,.8,0);}}        // 멀리서 길게 조준선(예고)
+      else if(S.ph==='aim'){S.t-=dt;e.invis=.55;
+        if(S.t<=0){S.ph='charge';S.t=1.15;e.invis=0;sBig();shake=Math.max(shake,5);}}
+      else{ // charge — 엄청 먼 거리에서 화면을 가로지르는 초고속 돌진
+        S.t-=dt;e.x+=Math.cos(S.ang2)*1080*dt;e.y+=Math.sin(S.ang2)*1080*dt;
+        if(player.iT<=0&&d<e.r*e.scale+player.r+8){hurtPlayer(12);
+          e.hp=Math.min(e.maxhp,e.hp+e.maxhp*.07);floater(e.x,e.y-e.r-10,'🩸 흡혈!','#ff3860',true);}
+        if(S.t<=0){S.ph='orbit';S.t=S.rage?1.6:2.3;}}
       break;
     case 'racc':{
       e.x+=dx/d*e.sp*dt;e.y+=dy/d*e.sp*dt;
@@ -2022,6 +2022,11 @@ function drawStk(s,x,y,rot,scale,flip){
   if(rot)ctx.rotate(rot);
   ctx.scale((flip?-1:1)*(scale||1),scale||1);
   ctx.drawImage(s.n,-s.half,-s.half);ctx.restore();}
+// 플레이어 투사체용 — 흰 실루엣을 살짝 키워 뒤에 깔아 '흰 테두리'를 만든다(그림자 없는 스프라이트 위)
+function drawBulletSpr(s,x,y,rot,scale){
+  ctx.save();ctx.translate(x,y);if(rot)ctx.rotate(rot);ctx.scale(scale,scale);
+  const o=1.2,h=s.half;ctx.drawImage(s.w,-h*o,-h*o,h*2*o,h*2*o); // 흰 테두리
+  ctx.drawImage(s.n,-h,-h);ctx.restore();}
 function drawObstacle(ob){
   const x=ob.x,y=ob.y,r=ob.r;
   if(ob.slow){ // sand pit / puddle — clearly readable "slow here" patch
@@ -2247,32 +2252,23 @@ function draw(){
     for(const g of w.pos){ctx.globalAlpha=.55+.15*Math.sin(performance.now()/300+g.x);
       drawStk(STK.ghostFam,g.x,g.y,Math.sin(performance.now()/500+g.y)*.15,(w.sp.king?1.6:1)*(1+(w.size-1)*.5),false);}
     ctx.globalAlpha=1;}
-  // bullets (player) — 크고 또렷하게: 굵은 트레일 + 1.3배 스프라이트 (화면 밖은 건너뜀)
+  // bullets (player) — 깔끔하게 '아이콘 + 흰 테두리'만. 글로우 범위/반짝이/검은그림자 전부 제거.
   for(const b of bullets){
     if(!inV(b.x,b.y,40))continue; // 컬링
     const gl=b.glow||0;
-    // power trail
-    const tl=.045+gl*.016;
-    ctx.globalAlpha=.45;ctx.strokeStyle=gl>=2?(b.gcol||'#fff'):'#fff';ctx.lineWidth=4.5+gl*.8;
+    // 얇은 모션 트레일 (범위가 아니라 진행 방향 잔상)
+    const tl=.04+gl*.01;
+    ctx.globalAlpha=.3;ctx.strokeStyle='#fff';ctx.lineWidth=3+gl*.4;
     ctx.beginPath();ctx.moveTo(b.x-b.vx*tl,b.y-b.vy*tl);ctx.lineTo(b.x,b.y);ctx.stroke();
-    // glow halo — 강화탄(gl>=2)에만, 모바일은 생략(채우기 부하↓). 기본 가시성은 스프라이트+트레일로 충분
-    if(gl>=2&&!IS_TOUCH0){const pr=(b.r||7)*(b.scale||1)+7+gl*1.4;
-      ctx.globalAlpha=.14+Math.min(gl,5)*.02;
-      ctx.fillStyle=b.gcol||'#ffd23e';ctx.beginPath();ctx.arc(b.x,b.y,pr,0,TAU);ctx.fill();}
     ctx.globalAlpha=1;
-    if(b.spr==='rapid'){ctx.fillStyle='#fffbe0';ctx.strokeStyle=OUT;ctx.lineWidth=2.4;
-      ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.rot);
-      ctx.beginPath();ctx.ellipse(0,0,9.5,4.6,0,0,TAU);ctx.fill();ctx.stroke();ctx.restore();}
+    if(b.spr==='rapid'){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.rot);
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(0,0,11,5.8,0,0,TAU);ctx.fill();          // 흰 테두리
+      ctx.fillStyle='#fffbe0';ctx.beginPath();ctx.ellipse(0,0,9.2,4.4,0,0,TAU);ctx.fill();ctx.restore();}
     else if(b.spr==='laser'){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.rot);
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(0,0,(b.r||5)*3.1,(b.r||5)*1.08,0,0,TAU);ctx.fill();
       ctx.fillStyle=b.gcol||'#ff4f6a';ctx.beginPath();ctx.ellipse(0,0,(b.r||5)*2.8,(b.r||5)*.85,0,0,TAU);ctx.fill();
       ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(0,0,(b.r||5)*1.9,(b.r||5)*.4,0,0,TAU);ctx.fill();ctx.restore();}
-    else drawStk(STK[b.spr],b.x,b.y,b.rot,(b.scale||1)*1.3*(1+Math.min(gl,6)*.04));
-    // sparkle orbiters on very high power
-    if(gl>=5){const a=performance.now()/90+b.x;
-      ctx.fillStyle='#fff';ctx.globalAlpha=.8;
-      for(let k=0;k<3;k++){const aa=a+k*2.1;
-        ctx.beginPath();ctx.arc(b.x+Math.cos(aa)*(b.r*b.scale+9),b.y+Math.sin(aa)*(b.r*b.scale+9),2,0,TAU);ctx.fill();}
-      ctx.globalAlpha=1;}}
+    else drawBulletSpr(STK[b.spr],b.x,b.y,b.rot,(b.scale||1)*1.3*(1+Math.min(gl,6)*.04));}
   for(const b of ebullets)if(inV(b.x,b.y,30))drawEb(b);
   // bolts
   ctx.lineWidth=4;
@@ -2384,7 +2380,15 @@ function draw(){
     if(player.shieldT>0||player.buffs.invinc){
       ctx.globalAlpha=.55+.25*Math.sin(performance.now()/90);
       ctx.strokeStyle='#ffd75a';ctx.lineWidth=4;
-      ctx.beginPath();ctx.arc(player.x,player.y-4,30,0,TAU);ctx.stroke();ctx.globalAlpha=1;}}
+      ctx.beginPath();ctx.arc(player.x,player.y-4,30,0,TAU);ctx.stroke();ctx.globalAlpha=1;}
+    // 타임드 드랍스킬 잔여시간 — 머리 위에 작게
+    {const ic={berserk:'😤',tiger:'🐯',invinc:'✨'},tb=[];
+      for(const k in ic)if(player.buffs[k]>0)tb.push(k);
+      if(tb.length){ctx.font='900 12px Jua,sans-serif';ctx.textAlign='center';ctx.textBaseline='alphabetic';
+        let bx=player.x-(tb.length-1)*16;
+        for(const k of tb){const txt=ic[k]+Math.ceil(player.buffs[k]);
+          ctx.globalAlpha=1;ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.55)';ctx.strokeText(txt,bx,player.y-34);
+          ctx.fillStyle='#fff';ctx.fillText(txt,bx,player.y-34);bx+=32;}}}}
   // particles
   for(const p of parts){if(!inV(p.x,p.y,20))continue; // 컬링
     ctx.globalAlpha=Math.max(0,p.life)*(p.puff?.7:1);
@@ -2432,10 +2436,11 @@ function draw(){
     ctx.beginPath();ctx.arc(joy.ax,joy.ay,52,0,TAU);ctx.stroke();
     ctx.globalAlpha=.55;ctx.fillStyle='#fff';
     ctx.beginPath();ctx.arc(joy.ax+joy.dx*40,joy.ay+joy.dy*40,20,0,TAU);ctx.fill();ctx.globalAlpha=1;}
-  for(const b of banners){
+  for(let i=0;i<banners.length;i++){const b=banners[i];
     const inT=Math.min(1,b.t*5),outT=clamp((b.dur-b.t)*3,0,1);
     const sc=.4+.6*(1-Math.pow(1-inT,3));
-    ctx.save();ctx.translate(W/2,H*.3);ctx.scale(sc,sc);
+    const y=H*.3+i*42-b.t*30; // 인덱스로 쌓고 나이 들수록 위로 떠오름 → 글씨 안 겹침
+    ctx.save();ctx.translate(W/2,y);ctx.scale(sc,sc);
     ctx.globalAlpha=Math.min(inT,outT);
     ctx.font=`900 ${Math.min(W*.062,34)}px Jua,sans-serif`;ctx.textAlign='center';
     ctx.lineWidth=8;ctx.strokeStyle='rgba(50,35,15,.8)';ctx.strokeText(b.txt,0,0);
