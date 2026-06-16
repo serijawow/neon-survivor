@@ -1,5 +1,5 @@
 'use strict';
-const GAME_VER='v5.6-flow'; // 레벨상한22(보스후 성장)+곡선완화, 달인 XP+보스HP↓, 하악질 근접발동+넉백, 막보스 전리품 자동흡입, 고등어 크게
+const GAME_VER='v5.7-perf'; // 렉: 뷰포트 컬링(탄/적탄/파티클/플로터/노바) + 글로우할로 강화탄·데스크탑한정 + 파티클캡↓
 // ================= canvas =================
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1,zoom=1;
@@ -12,7 +12,7 @@ addEventListener('resize',resize);resize();
 const $=id=>document.getElementById(id);
 const _urlCache=new WeakMap();
 function cvURL(c){let u=_urlCache.get(c);if(!u){u=c.toDataURL();_urlCache.set(c,u);}return u;}
-const PCAP=IS_TOUCH0?300:480;  // cap particles lower on phones
+const PCAP=IS_TOUCH0?180:340;  // 파티클 상한 — 채우기 부하 줄이려 하향(모바일 특히)
 const rnd=(a,b)=>a+Math.random()*(b-a);
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const dist2=(ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by;return dx*dx+dy*dy};
@@ -2114,6 +2114,9 @@ function draw(){
   if(shake>.4)ctx.translate(rnd(-shake,shake),rnd(-shake,shake));
   // world transform: center on camera, zoomed out on small screens
   ctx.translate(W/2,H/2);ctx.scale(zoom,zoom);ctx.translate(-cam.x,-cam.y);
+  // 뷰포트 컬링: 화면 밖 요소는 그리지 않는다(채우기 부하=렉의 주범). m=여유 반경
+  const VHW=(W/2)/zoom+40,VHH=(H/2)/zoom+40;
+  const inV=(x,y,m)=>Math.abs(x-cam.x)<VHW+(m||0)&&Math.abs(y-cam.y)<VHH+(m||0);
   drawArena();
   // map obstacles (under everything)
   for(const ob of obstacles)drawObstacle(ob);
@@ -2171,14 +2174,14 @@ function draw(){
     ctx.globalAlpha=1;}
   // novas
   for(const f of fxs)if(f.kind==='nova'){
+    if(!inV(f.x,f.y,f.r+20))continue; // 컬링
     ctx.globalAlpha=Math.max(0,1-f.t/.45);
     ctx.strokeStyle=f.col;ctx.lineWidth=6;
     ctx.beginPath();ctx.arc(f.x,f.y,f.r,0,TAU);ctx.stroke();
     ctx.globalAlpha*=.22;ctx.fillStyle=f.col;ctx.fill();ctx.globalAlpha=1;}
   // enemies — 화면 밖 적은 그리지 않는다(컬링): 대량 스폰 시 그리기 부하 감소.
   // (모양은 이미 STK 캐시에서 타입당 1장 공유 blit — 개체마다 새로 만들지 않음)
-  const vhw=(W/2)/zoom+96,vhh=(H/2)/zoom+96;
-  const onScreen=e=>Math.abs(e.x-cam.x)<vhw+e.r*e.scale&&Math.abs(e.y-cam.y)<vhh+e.r*e.scale;
+  const onScreen=e=>inV(e.x,e.y,e.r*e.scale+56);
   ctx.globalAlpha=.16;ctx.fillStyle='#1c3206';        // 그림자 패스 — 스타일 1회만 세팅
   for(const e of enemies){if(!onScreen(e))continue;
     ctx.beginPath();ctx.ellipse(e.x,e.y+e.r*e.scale*.75,e.r*e.scale*.8,e.r*e.scale*.3,0,0,TAU);ctx.fill();}
@@ -2233,16 +2236,17 @@ function draw(){
     for(const g of w.pos){ctx.globalAlpha=.55+.15*Math.sin(performance.now()/300+g.x);
       drawStk(STK.ghostFam,g.x,g.y,Math.sin(performance.now()/500+g.y)*.15,(w.sp.king?1.6:1)*(1+(w.size-1)*.5),false);}
     ctx.globalAlpha=1;}
-  // bullets (player) — 크고 또렷하게: 굵은 트레일 + 상시 글로우 + 1.3배 스프라이트
+  // bullets (player) — 크고 또렷하게: 굵은 트레일 + 1.3배 스프라이트 (화면 밖은 건너뜀)
   for(const b of bullets){
+    if(!inV(b.x,b.y,40))continue; // 컬링
     const gl=b.glow||0;
     // power trail
     const tl=.045+gl*.016;
     ctx.globalAlpha=.45;ctx.strokeStyle=gl>=2?(b.gcol||'#fff'):'#fff';ctx.lineWidth=4.5+gl*.8;
     ctx.beginPath();ctx.moveTo(b.x-b.vx*tl,b.y-b.vy*tl);ctx.lineTo(b.x,b.y);ctx.stroke();
-    // glow halo — 기본부터 켜져서 어디 있는지 항상 보인다 (강화될수록 커짐)
-    {const pr=(b.r||7)*(b.scale||1)+9+gl*1.8;
-      ctx.globalAlpha=.16+Math.min(gl,5)*.022+.08*Math.sin(performance.now()/120+b.x);
+    // glow halo — 강화탄(gl>=2)에만, 모바일은 생략(채우기 부하↓). 기본 가시성은 스프라이트+트레일로 충분
+    if(gl>=2&&!IS_TOUCH0){const pr=(b.r||7)*(b.scale||1)+7+gl*1.4;
+      ctx.globalAlpha=.14+Math.min(gl,5)*.02;
       ctx.fillStyle=b.gcol||'#ffd23e';ctx.beginPath();ctx.arc(b.x,b.y,pr,0,TAU);ctx.fill();}
     ctx.globalAlpha=1;
     if(b.spr==='rapid'){ctx.fillStyle='#fffbe0';ctx.strokeStyle=OUT;ctx.lineWidth=2.4;
@@ -2258,7 +2262,7 @@ function draw(){
       for(let k=0;k<3;k++){const aa=a+k*2.1;
         ctx.beginPath();ctx.arc(b.x+Math.cos(aa)*(b.r*b.scale+9),b.y+Math.sin(aa)*(b.r*b.scale+9),2,0,TAU);ctx.fill();}
       ctx.globalAlpha=1;}}
-  for(const b of ebullets)drawEb(b);
+  for(const b of ebullets)if(inV(b.x,b.y,30))drawEb(b);
   // bolts
   ctx.lineWidth=4;
   for(const f of fxs)if(f.kind==='bolt'){
@@ -2367,13 +2371,15 @@ function draw(){
       ctx.strokeStyle='#ffd75a';ctx.lineWidth=4;
       ctx.beginPath();ctx.arc(player.x,player.y-4,30,0,TAU);ctx.stroke();ctx.globalAlpha=1;}}
   // particles
-  for(const p of parts){ctx.globalAlpha=Math.max(0,p.life)*(p.puff?.7:1);
+  for(const p of parts){if(!inV(p.x,p.y,20))continue; // 컬링
+    ctx.globalAlpha=Math.max(0,p.life)*(p.puff?.7:1);
     ctx.fillStyle=p.col;
     if(p.puff){ctx.beginPath();ctx.arc(p.x,p.y,p.sz,0,TAU);ctx.fill();}
     else ctx.fillRect(p.x-p.sz/2,p.y-p.sz/2,p.sz,p.sz);}
   ctx.globalAlpha=1;
   ctx.textAlign='center';
-  for(const f of floaters){ctx.globalAlpha=Math.max(0,f.t);
+  for(const f of floaters){if(!inV(f.x,f.y,30))continue; // 컬링
+    ctx.globalAlpha=Math.max(0,f.t);
     ctx.font=`900 ${f.big?18:12.5}px Jua,sans-serif`;
     ctx.strokeStyle='rgba(0,0,0,.45)';ctx.lineWidth=3;
     ctx.strokeText(f.txt,f.x,f.y);
